@@ -1,0 +1,20 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    
+    "python.condaPath": "D:\\Anaconda\\Scripts\\conda.exe",
+    
+    "python.experiments.optOutFrom": ["pythonTerminalEnvVarActivation"],
+    
+    "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+            "source": "PowerShell",
+            "args": ["-ExecutionPolicy", "RemoteSigned", "-NoExit"]
+        }
+    }
+}
