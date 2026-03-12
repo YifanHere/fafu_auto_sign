@@ -13,12 +13,10 @@ import os
 from unittest.mock import patch, MagicMock
 from freezegun import freeze_time
 
-# 如果已经加载了 fafu_auto_sign 模块，先移除它
-if 'fafu_auto_sign' in sys.modules:
-    del sys.modules['fafu_auto_sign']
-# 将项目根目录添加到路径最前面
+# Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import fafu_auto_sign
+
+from fafu_auto_sign.crypto import generate_auth_header, generate_headers
 
 
 class TestAuthHeaderFormat:
@@ -29,10 +27,7 @@ class TestAuthHeaderFormat:
         """
         验证 generate_auth_header 输出是有效的 Base64 字符串
         """
-        # 固定 token
-        # 固定 token
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth_header = fafu_auto_sign.generate_auth_header("http://test.com/api")
+        auth_header = generate_auth_header("http://test.com/api", sample_token)
         
         # 验证是有效的 Base64
         assert isinstance(auth_header, str)
@@ -44,40 +39,23 @@ class TestAuthHeaderFormat:
         """
         验证解码后格式为: timestamp:nonce:sign:token
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth_header = fafu_auto_sign.generate_auth_header("http://test.com/api")
-            auth_header = fafu_auto_sign.generate_auth_header("http://test.com/api")
+        auth_header = generate_auth_header("http://test.com/api", sample_token)
         
-        # 验证是有效的 Base64
-        assert isinstance(auth_header, str)
+        # 解码并验证结构
         decoded = base64.b64decode(auth_header).decode('utf-8')
-        assert ':' in decoded
+        parts = decoded.split(':')
+        
+        # 验证有4个部分
+        assert len(parts) == 4
+        
+        timestamp, nonce, sign, token = parts
+        
+        # 验证各部分格式
+        assert timestamp.isdigit()  # timestamp 是数字
+        assert len(nonce) == 16     # nonce 是16位
+        assert len(sign) == 32      # sign 是32位 MD5
+        assert token == sample_token  # token 正确
     
-    @freeze_time("2009-02-13 23:31:30")
-    def test_auth_header_decoded_format(self, sample_token):
-        """
-        验证解码后格式为: timestamp:nonce:sign:token
-        """
-        original_token = fafu_auto_sign.USER_TOKEN
-        fafu_auto_sign.USER_TOKEN = sample_token
-        try:
-            auth_header = fafu_auto_sign.generate_auth_header("http://test.com/api")
-            
-            decoded = base64.b64decode(auth_header).decode('utf-8')
-            parts = decoded.split(':')
-            
-            # 验证有4个部分
-            assert len(parts) == 4
-            
-            timestamp, nonce, sign, token = parts
-            
-            # 验证各部分格式
-            assert timestamp.isdigit()  # timestamp 是数字
-            assert len(nonce) == 16     # nonce 是16位
-            assert len(sign) == 32      # sign 是32位 MD5
-            assert token == sample_token  # token 正确
-        finally:
-            fafu_auto_sign.USER_TOKEN = original_token
     @freeze_time("2009-02-13 23:31:30")
     def test_timestamp_is_unix_seconds(self, sample_token):
         """
@@ -85,8 +63,7 @@ class TestAuthHeaderFormat:
         """
         frozen_time = 1234567890
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth_header = fafu_auto_sign.generate_auth_header("http://test.com/api")
+        auth_header = generate_auth_header("http://test.com/api", sample_token)
         
         decoded = base64.b64decode(auth_header).decode('utf-8')
         timestamp = decoded.split(':')[0]
@@ -98,8 +75,7 @@ class TestAuthHeaderFormat:
         """
         验证 nonce 是16位字母数字组合
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth_header = fafu_auto_sign.generate_auth_header("http://test.com/api")
+        auth_header = generate_auth_header("http://test.com/api", sample_token)
         
         decoded = base64.b64decode(auth_header).decode('utf-8')
         nonce = decoded.split(':')[1]
@@ -112,8 +88,7 @@ class TestAuthHeaderFormat:
         """
         验证 sign 是32位十六进制 MD5 哈希
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth_header = fafu_auto_sign.generate_auth_header("http://test.com/api")
+        auth_header = generate_auth_header("http://test.com/api", sample_token)
         
         decoded = base64.b64decode(auth_header).decode('utf-8')
         sign = decoded.split(':')[2]
@@ -130,11 +105,11 @@ class TestAuthHeaderUrlCleanup:
         """
         验证 URL 查询参数被正确排除
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            # 使用带参数的 URL
-            auth_header = fafu_auto_sign.generate_auth_header(
-                "http://stuhtapi.fafu.edu.cn/api?param1=value1&param2=value2"
-            )
+        # 使用带参数的 URL
+        auth_header = generate_auth_header(
+            "http://stuhtapi.fafu.edu.cn/api?param1=value1&param2=value2",
+            sample_token
+        )
         
         # 解码并检查 sign
         decoded = base64.b64decode(auth_header).decode('utf-8')
@@ -154,10 +129,10 @@ class TestAuthHeaderUrlCleanup:
         """
         验证多路径段的 URL 被正确处理
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth_header = fafu_auto_sign.generate_auth_header(
-                "http://stuhtapi.fafu.edu.cn/health-api/sign_in/student/my/page?rows=10"
-            )
+        auth_header = generate_auth_header(
+            "http://stuhtapi.fafu.edu.cn/health-api/sign_in/student/my/page?rows=10",
+            sample_token
+        )
         
         decoded = base64.b64decode(auth_header).decode('utf-8')
         parts = decoded.split(':')
@@ -176,9 +151,8 @@ class TestAuthHeaderUrlCleanup:
         """
         验证 HTTP 和 HTTPS URL 都能正确处理并产生不同的签名
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth_http = fafu_auto_sign.generate_auth_header("http://example.com/api")
-            auth_https = fafu_auto_sign.generate_auth_header("https://example.com/api")
+        auth_http = generate_auth_header("http://example.com/api", sample_token)
+        auth_https = generate_auth_header("https://example.com/api", sample_token)
         
         # 两者都应该能成功解码为有效的格式
         decoded_http = base64.b64decode(auth_http).decode('utf-8')
@@ -205,39 +179,36 @@ class TestAuthHeaderSignAlgorithm:
         
         这个测试捕获当前行为，使用固定的 nonce 来验证整个算法流程
         """
-        original_token = fafu_auto_sign.USER_TOKEN
-        fafu_auto_sign.USER_TOKEN = 'test_token_123'
-        try:
-            # Mock random.choices 返回固定值
-            with patch('fafu_auto_sign.random.choices', return_value=list('fixednonce123456')):
-                auth_header = fafu_auto_sign.generate_auth_header("http://test.com/api")
-            
-            # 解码并验证
-            decoded = base64.b64decode(auth_header).decode('utf-8')
-            parts = decoded.split(':')
-            timestamp, nonce, sign, token = parts
-            
-            # 验证各部分
-            assert timestamp == "1234567890"
-            assert nonce == "fixednonce123456"
-            assert token == "test_token_123"
-            
-            # 验证 sign 计算正确
-            secret = "AtPs2O1xEnhwkKDV"
-            clean_url = "http://test.com/api"
-            expected_raw = f"{secret}{clean_url}{timestamp}{nonce}"
-            expected_sign = hashlib.md5(expected_raw.encode('utf-8')).hexdigest()
-            assert sign == expected_sign
-        finally:
-            fafu_auto_sign.USER_TOKEN = original_token
+        test_token = '2_test_token_123'
+        
+        # Mock random.choices 返回固定值
+        with patch('fafu_auto_sign.crypto.random.choices', return_value=list('fixednonce123456')):
+            auth_header = generate_auth_header("http://test.com/api", test_token)
+        
+        # 解码并验证
+        decoded = base64.b64decode(auth_header).decode('utf-8')
+        parts = decoded.split(':')
+        timestamp, nonce, sign, token = parts
+        
+        # 验证各部分
+        assert timestamp == "1234567890"
+        assert nonce == "fixednonce123456"
+        assert token == test_token
+        
+        # 验证 sign 计算正确
+        secret = "AtPs2O1xEnhwkKDV"
+        clean_url = "http://test.com/api"
+        expected_raw = f"{secret}{clean_url}{timestamp}{nonce}"
+        expected_sign = hashlib.md5(expected_raw.encode('utf-8')).hexdigest()
+        assert sign == expected_sign
+    
     @freeze_time("2009-02-13 23:31:30")
     def test_different_urls_produce_different_signs(self, sample_token):
         """
         验证不同 URL 产生不同的签名
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth1 = fafu_auto_sign.generate_auth_header("http://test.com/api1")
-            auth2 = fafu_auto_sign.generate_auth_header("http://test.com/api2")
+        auth1 = generate_auth_header("http://test.com/api1", sample_token)
+        auth2 = generate_auth_header("http://test.com/api2", sample_token)
         
         decoded1 = base64.b64decode(auth1).decode('utf-8')
         decoded2 = base64.b64decode(auth2).decode('utf-8')
@@ -252,9 +223,8 @@ class TestAuthHeaderSignAlgorithm:
         """
         验证相同输入产生一致的结构（nonce 除外）
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            auth1 = fafu_auto_sign.generate_auth_header("http://test.com/api")
-            auth2 = fafu_auto_sign.generate_auth_header("http://test.com/api")
+        auth1 = generate_auth_header("http://test.com/api", sample_token)
+        auth2 = generate_auth_header("http://test.com/api", sample_token)
         
         decoded1 = base64.b64decode(auth1).decode('utf-8')
         decoded2 = base64.b64decode(auth2).decode('utf-8')
@@ -270,15 +240,14 @@ class TestAuthHeaderSignAlgorithm:
 
 
 class TestGetCommonHeaders:
-    """测试 get_common_headers 函数"""
+    """测试 generate_headers 函数"""
     
     @freeze_time("2009-02-13 23:31:30")
     def test_headers_contain_required_fields(self, sample_token):
         """
         验证生成的 headers 包含所有必需字段
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            headers = fafu_auto_sign.get_common_headers("http://test.com/api")
+        headers = generate_headers("http://test.com/api", sample_token)
         
         required_fields = [
             "Host",
@@ -298,8 +267,7 @@ class TestGetCommonHeaders:
         """
         验证 Authorization 头是 Base64 编码
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            headers = fafu_auto_sign.get_common_headers("http://test.com/api")
+        headers = generate_headers("http://test.com/api", sample_token)
         
         auth = headers["Authorization"]
         

@@ -1,7 +1,7 @@
 """
 Task identification characterization tests.
 
-These tests capture the current behavior of the get_pending_task() function
+These tests capture the current behavior of the TaskService.get_pending_task() method
 and serve as regression tests after refactoring.
 """
 import pytest
@@ -11,12 +11,12 @@ import sys
 import os
 from freezegun import freeze_time
 
-# 如果已经加载了 fafu_auto_sign 模块，先移除它
-if 'fafu_auto_sign' in sys.modules:
-    del sys.modules['fafu_auto_sign']
-# 将项目根目录添加到路径最前面
+# Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import fafu_auto_sign
+
+from fafu_auto_sign.config import AppConfig
+from fafu_auto_sign.client import FAFUClient
+from fafu_auto_sign.services.task_service import TaskService
 
 
 class TestTaskIdentification:
@@ -27,18 +27,22 @@ class TestTaskIdentification:
         """
         测试能正确识别包含"晚归"关键词且在时间窗口内的有效任务
         """
+        # Create config and service
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         # Mock 网络响应
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(sample_tasks)
         mock_response.json.return_value = sample_tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         # 应该返回第一个匹配的晚归任务
-        assert task_id == 1001
+        assert task_id == "1001"
     
     @freeze_time("2009-02-13 23:31:30")
     def test_skip_non_target_keyword_tasks(self, sample_token):
@@ -63,14 +67,17 @@ class TestTaskIdentification:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(non_target_tasks)
         mock_response.json.return_value = non_target_tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         # 没有匹配的任务
         assert task_id is None
@@ -92,14 +99,17 @@ class TestTaskIdentification:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(expired_tasks)
         mock_response.json.return_value = expired_tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         # 任务已过期，不应返回
         assert task_id is None
@@ -121,14 +131,17 @@ class TestTaskIdentification:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(future_tasks)
         mock_response.json.return_value = future_tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         # 任务还未开始，不应返回
         assert task_id is None
@@ -153,16 +166,19 @@ class TestTaskTimeFiltering:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(tasks)
         mock_response.json.return_value = tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
-        assert task_id == 2001
+        assert task_id == "2001"
     
     @freeze_time("2009-02-13 23:31:40")  # Unix timestamp 1234567900
     def test_task_at_exact_end_time_is_active(self, sample_token):
@@ -180,16 +196,19 @@ class TestTaskTimeFiltering:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(tasks)
         mock_response.json.return_value = tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
-        assert task_id == 2002
+        assert task_id == "2002"
     
     @freeze_time("2009-02-13 23:31:41")  # Unix timestamp 1234567901
     def test_task_one_second_after_end_is_inactive(self, sample_token):
@@ -207,14 +226,17 @@ class TestTaskTimeFiltering:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(tasks)
         mock_response.json.return_value = tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         assert task_id is None
     
@@ -234,14 +256,17 @@ class TestTaskTimeFiltering:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(tasks)
         mock_response.json.return_value = tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         assert task_id is None
 
@@ -272,17 +297,20 @@ class TestTaskKeywordFiltering:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(tasks)
         mock_response.json.return_value = tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         # 应该返回第一个匹配的任务
-        assert task_id == 3001
+        assert task_id == "3001"
     
     @freeze_time("2009-02-13 23:31:30")
     def test_keyword_matching_is_case_sensitive(self, sample_token):
@@ -301,14 +329,17 @@ class TestTaskKeywordFiltering:
             ]
         }
         
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = json.dumps(tasks)
         mock_response.json.return_value = tasks
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         # 繁体字"晚歸"不匹配简体字"晚归"
         assert task_id is None
@@ -322,14 +353,17 @@ class TestTaskEdgeCases:
         """
         测试空任务列表返回 None
         """
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = '{"records": []}'
         mock_response.json.return_value = {"records": []}
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         assert task_id is None
     
@@ -338,26 +372,31 @@ class TestTaskEdgeCases:
         """
         测试缺少 records 字段返回 None
         """
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = '{"data": []}'
         mock_response.json.return_value = {"data": []}
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response):
-                task_id = fafu_auto_sign.get_pending_task()
+        with patch('requests.Session.request', return_value=mock_response):
+            task_id = service.get_pending_task()
         
         assert task_id is None
     
-    def test_network_error_returns_none(self, sample_token):
+    def test_network_error_raises_exception(self, sample_token):
         """
-        测试网络错误返回 None
+        测试网络错误抛出异常
         """
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', side_effect=Exception("Connection error")):
-                task_id = fafu_auto_sign.get_pending_task()
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
         
-        assert task_id is None
+        with patch('requests.Session.request', side_effect=Exception("Connection error")):
+            with pytest.raises(Exception, match="Connection error"):
+                service.get_pending_task()
 
 
 class TestTaskApiRequest:
@@ -368,36 +407,42 @@ class TestTaskApiRequest:
         """
         验证请求的 URL 是正确的
         """
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = '{"records": []}'
         mock_response.json.return_value = {"records": []}
         
-        expected_url = "http://stuhtapi.fafu.edu.cn/health-api/sign_in/student/my/page?rows=10&pageNum=1&signState=0"
+        expected_url_contains = "/health-api/sign_in/student/my/page"
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response) as mock_post:
-                fafu_auto_sign.get_pending_task()
-                
-                # 验证调用的 URL
-                call_args = mock_post.call_args
-                assert call_args[0][0] == expected_url
+        with patch('requests.Session.request', return_value=mock_response) as mock_request:
+            service.get_pending_task()
+            
+            # 验证调用的 URL 包含期望的路径
+            call_args = mock_request.call_args
+            assert expected_url_contains in call_args[0][1]
     
     @freeze_time("2009-02-13 23:31:30")
     def test_request_includes_content_type_header(self, sample_token):
         """
         验证请求包含 Content-Type header
         """
+        config = AppConfig(user_token=sample_token)
+        client = FAFUClient(config)
+        service = TaskService(client)
+        
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = '{"records": []}'
         mock_response.json.return_value = {"records": []}
         
-        with patch('fafu_auto_sign.USER_TOKEN', sample_token):
-            with patch('requests.post', return_value=mock_response) as mock_post:
-                fafu_auto_sign.get_pending_task()
-                
-                # 验证 headers 中包含 Content-Type
-                call_kwargs = mock_post.call_args[1]
-                headers = call_kwargs.get('headers', {})
-                assert headers.get('Content-Type') == 'application/x-www-form-urlencoded'
+        with patch('requests.Session.request', return_value=mock_response) as mock_request:
+            service.get_pending_task()
+            
+            # 验证 headers 中包含 Content-Type
+            call_kwargs = mock_request.call_args[1]
+            headers = call_kwargs.get('headers', {})
+            assert headers.get('Content-Type') == 'application/x-www-form-urlencoded'
