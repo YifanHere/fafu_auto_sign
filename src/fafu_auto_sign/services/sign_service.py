@@ -21,7 +21,7 @@ class SignService:
     
     Attributes:
         client: FAFUClient instance for making HTTP requests
-        config: AppConfig instance containing location and settings
+        config: AppConfig instance containing jitter settings
         logger: Logger instance for this service
     """
     
@@ -36,7 +36,8 @@ class SignService:
         self.config = config
         self.logger = logging.getLogger(self.__class__.__name__)
     
-    def submit_sign(self, task_id: str, image_url: str) -> bool:
+    def submit_sign(self, task_id: int, position_id: int,
+                    base_lng: float, base_lat: float, image_url: str) -> bool:
         """Submit a sign-in request with GPS jitter.
         
         This method generates randomized GPS coordinates by adding a small
@@ -45,20 +46,20 @@ class SignService:
         
         Args:
             task_id: The task ID to sign in for.
+            position_id: The sign-in position ID from task details.
+            base_lng: Base longitude coordinate from task details.
+            base_lat: Base latitude coordinate from task details.
             image_url: The URL of the uploaded sign-in image.
         
         Returns:
             True if the sign-in was successful (HTTP 200), False otherwise.
         """
         # Generate randomized GPS coordinates with jitter
-        base_lng = self.config.location.lng
-        base_lat = self.config.location.lat
+        jitter = self.config.jitter
+        lng = base_lng + random.uniform(-jitter, jitter)
+        lat = base_lat + random.uniform(-jitter, jitter)
         
-        # Apply random offset to prevent detection (±0.00005 degrees)
-        lng = base_lng + random.uniform(-0.00005, 0.00005)
-        lat = base_lat + random.uniform(-0.00005, 0.00005)
-        
-        # Build the API endpoint URL
+        # Build the API endpoint URL (clean base URL, no query params)
         url = f"/health-api/sign_in/{task_id}/student/sign"
         
         # Prepare query parameters (must be URL query params, not JSON body)
@@ -66,7 +67,7 @@ class SignService:
             "lng": f"{lng:.6f}",
             "lat": f"{lat:.6f}",
             "signImg": image_url,
-            "signInPositionId": self.config.sign_in_position_id
+            "signInPositionId": position_id
         }
         
         self.logger.debug(f"Submitting sign-in for task {task_id} at coordinates [{lng:.6f}, {lat:.6f}]")
@@ -87,19 +88,22 @@ class SignService:
             self.logger.error(f"❌ 签到请求发生异常: {e}")
             return False
     
-    def _calculate_jittered_coordinates(self) -> tuple[float, float]:
+    def _calculate_jittered_coordinates(self, base_lng: float, base_lat: float) -> tuple[float, float]:
         """Calculate GPS coordinates with random jitter.
         
         This is a helper method that can be used for testing or
         when you need just the coordinates without submitting.
         
+        Args:
+            base_lng: Base longitude coordinate.
+            base_lat: Base latitude coordinate.
+        
         Returns:
             Tuple of (longitude, latitude) with jitter applied.
         """
-        base_lng = self.config.location.lng
-        base_lat = self.config.location.lat
+        jitter = self.config.jitter
         
-        lng = base_lng + random.uniform(-0.00005, 0.00005)
-        lat = base_lat + random.uniform(-0.00005, 0.00005)
+        lng = base_lng + random.uniform(-jitter, jitter)
+        lat = base_lat + random.uniform(-jitter, jitter)
         
         return lng, lat

@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import pytest
 
 from fafu_auto_sign.client import FAFUClient
-from fafu_auto_sign.config import AppConfig, LocationConfig
+from fafu_auto_sign.config import AppConfig
 from fafu_auto_sign.services.sign_service import SignService
 
 
@@ -24,10 +24,7 @@ from fafu_auto_sign.services.sign_service import SignService
 def mock_config():
     """Create a mock configuration for testing."""
     config = MagicMock(spec=AppConfig)
-    config.location = MagicMock(spec=LocationConfig)
-    config.location.lng = 118.237686
-    config.location.lat = 25.077727
-    config.sign_in_position_id = 516208
+    config.jitter = 0.00005
     return config
 
 
@@ -56,7 +53,7 @@ class TestSubmitSign:
         mock_client.post.return_value = mock_response
         
         # Act
-        result = sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+        result = sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
         # Assert
         assert result is True
@@ -70,7 +67,7 @@ class TestSubmitSign:
         mock_client.post.return_value = mock_response
         
         # Act
-        result = sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+        result = sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
         # Assert
         assert result is False
@@ -83,13 +80,13 @@ class TestSubmitSign:
         mock_client.post.return_value = mock_response
         
         # Act
-        sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+        sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
         # Assert
         call_args = mock_client.post.call_args
         
         # Check URL
-        assert call_args[0][0] == "/health-api/sign_in/task_123/student/sign"
+        assert call_args[0][0] == "/health-api/sign_in/123/student/sign"
         
         # Check that params kwarg was used (URL query params)
         assert "params" in call_args.kwargs
@@ -109,7 +106,7 @@ class TestSubmitSign:
         mock_client.post.return_value = mock_response
         
         # Act
-        sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+        sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
         # Assert
         call_args = mock_client.post.call_args
@@ -143,11 +140,12 @@ class TestGPSJitter:
         
         base_lng = 118.237686
         base_lat = 25.077727
+        jitter = 0.00005
         
         # Act - Run multiple times to test randomness
         for _ in range(100):
             mock_client.reset_mock()
-            sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+            sign_service.submit_sign(123, 516208, base_lng, base_lat, "http://example.com/image.jpg")
             
             call_args = mock_client.post.call_args
             params = call_args.kwargs["params"]
@@ -159,9 +157,8 @@ class TestGPSJitter:
             lng_diff = abs(actual_lng - base_lng)
             lat_diff = abs(actual_lat - base_lat)
             
-            assert lng_diff <= 0.000051, f"Longitude jitter {lng_diff} exceeds max 0.00005"
-            assert lat_diff <= 0.000051, f"Latitude jitter {lat_diff} exceeds max 0.00005"
-
+            assert lng_diff <= jitter * 1.01, f"Longitude jitter {lng_diff} exceeds max {jitter}"
+            assert lat_diff <= jitter * 1.01, f"Latitude jitter {lat_diff} exceeds max {jitter}"
     
     def test_gps_jitter_is_randomized(self, sign_service, mock_client):
         """Test that GPS coordinates are randomized (not always the same)."""
@@ -175,7 +172,7 @@ class TestGPSJitter:
         # Act - Collect multiple coordinate pairs
         for _ in range(10):
             mock_client.reset_mock()
-            sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+            sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
             
             call_args = mock_client.post.call_args
             params = call_args.kwargs["params"]
@@ -188,19 +185,20 @@ class TestGPSJitter:
     
     def test_calculate_jittered_coordinates_returns_tuple(self, sign_service):
         """Test the helper method returns correct tuple format."""
+        base_lng = 118.237686
+        base_lat = 25.077727
+        jitter = 0.00005
+        
         # Act
-        lng, lat = sign_service._calculate_jittered_coordinates()
+        lng, lat = sign_service._calculate_jittered_coordinates(base_lng, base_lat)
         
         # Assert
         assert isinstance(lng, float)
         assert isinstance(lat, float)
         
         # Check jitter range
-        base_lng = 118.237686
-        base_lat = 25.077727
-        
-        assert abs(lng - base_lng) <= 0.00005
-        assert abs(lat - base_lat) <= 0.00005
+        assert abs(lng - base_lng) <= jitter
+        assert abs(lat - base_lat) <= jitter
 
 
 class TestErrorHandling:
@@ -212,7 +210,7 @@ class TestErrorHandling:
         mock_client.post.side_effect = Exception("Network error")
         
         # Act
-        result = sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+        result = sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
         # Assert
         assert result is False
@@ -228,7 +226,7 @@ class TestErrorHandling:
         mock_client.post.return_value = mock_response
         
         # Act
-        sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+        sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
         # Assert
         assert "✅ 签到成功" in caplog.text
@@ -245,7 +243,7 @@ class TestErrorHandling:
         mock_client.post.return_value = mock_response
         
         # Act
-        sign_service.submit_sign("task_123", "http://example.com/image.jpg")
+        sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
         # Assert
         assert "❌ 签到失败" in caplog.text
