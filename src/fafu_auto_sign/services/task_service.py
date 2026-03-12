@@ -5,11 +5,30 @@ including fetching pending tasks and filtering based on time windows
 and keywords.
 """
 
+from dataclasses import dataclass
 import logging
 import time
 from typing import Optional
 
 from fafu_auto_sign.client import FAFUClient
+
+
+@dataclass
+class TaskDetails:
+    """Task details dataclass containing position information.
+    
+    Attributes:
+        task_id: The ID of the task
+        position_id: The ID of the sign-in position
+        base_lng: Base longitude coordinate (float)
+        base_lat: Base latitude coordinate (float)
+        position_name: Human-readable position name
+    """
+    task_id: int
+    position_id: int
+    base_lng: float
+    base_lat: float
+    position_name: str
 
 
 class TaskService:
@@ -123,3 +142,67 @@ class TaskService:
             # Log the error and re-raise for caller to handle
             self.logger.error(f"[!] 获取任务列表时发生异常: {e}")
             raise
+    
+    def get_task_details(self, task_id: int) -> Optional[TaskDetails]:
+        """Get task details including position information.
+        
+        This method fetches task details from the API and extracts
+        the sign-in position information including coordinates and position ID.
+        
+        Args:
+            task_id: The ID of the task to fetch details for
+            
+        Returns:
+            TaskDetails object if successful, None otherwise:
+            - Returns None if signInPositions is empty or None
+            - Returns None if API request fails
+            - Returns None if response parsing fails
+        """
+        url = f"/health-api/sign_in/{task_id}?fromPage=0"
+        
+        self.logger.info(f"[*] 请求任务详情 URL: {url}")
+        
+        try:
+            # Make the GET request to fetch task details
+            response = self.client.get(url)
+            
+            # Parse the JSON response
+            data = response.json()
+            sign_in_positions = data.get('signInPositions', [])
+            
+            # Boundary check: return None if signInPositions is empty or None
+            if not sign_in_positions:
+                self.logger.warning(f"[!] 任务 {task_id} 没有签到位置信息")
+                return None
+            
+            # Extract the first position
+            position = sign_in_positions[0]
+            
+            # Parse and convert fields
+            position_id = position.get('id')
+            lng_str = position.get('lng', '0')
+            lat_str = position.get('lat', '0')
+            position_name = position.get('positionName', '')
+            
+            # Convert lng/lat to float with defensive programming
+            try:
+                base_lng = float(lng_str)
+                base_lat = float(lat_str)
+            except (ValueError, TypeError) as e:
+                self.logger.error(f"[!] 无法解析坐标: lng={lng_str}, lat={lat_str}, 错误: {e}")
+                return None
+            
+            self.logger.info(f"[*] 成功获取任务 {task_id} 的位置信息: {position_name}")
+            
+            return TaskDetails(
+                task_id=task_id,
+                position_id=position_id,
+                base_lng=base_lng,
+                base_lat=base_lat,
+                position_name=position_name
+            )
+            
+        except Exception as e:
+            # Log the error and return None
+            self.logger.error(f"[!] 获取任务详情时发生异常: {e}")
+            return None

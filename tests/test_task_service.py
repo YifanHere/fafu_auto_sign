@@ -16,8 +16,8 @@ import pytest
 import requests
 
 from fafu_auto_sign.client import FAFUClient
-from fafu_auto_sign.config import AppConfig, LocationConfig
-from fafu_auto_sign.services.task_service import TaskService
+from fafu_auto_sign.config import AppConfig
+from fafu_auto_sign.services.task_service import TaskService, TaskDetails
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def mock_config():
     """Create a mock AppConfig for testing."""
     return AppConfig(
         user_token="2_TEST_TOKEN",
-        location=LocationConfig(lng=118.237686, lat=25.077727, jitter=0.00005),
+        jitter=0.00005,
         base_url="http://stuhtapi.fafu.edu.cn",
     )
 
@@ -432,3 +432,223 @@ class TestLogging:
                     no_task_calls = [call for call in mock_log.call_args_list 
                                      if '没有正在有效时间内' in str(call)]
                     assert len(no_task_calls) > 0
+
+
+class TestGetTaskDetails:
+    """Test get_task_details method with various scenarios."""
+    
+    def test_get_task_details_success(self, task_service):
+        """Test successfully getting task details."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "signInPositions": [
+                {
+                    "id": 516208,
+                    "lng": "118.23672800",
+                    "lat": "25.07728900",
+                    "positionName": "福建农林大学安溪校区学生公寓A10号楼",
+                    "radius": 160
+                }
+            ]
+        }
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response):
+            result = task_service.get_task_details(12345)
+            
+            assert result is not None
+            assert isinstance(result, TaskDetails)
+            assert result.task_id == 12345
+            assert result.position_id == 516208
+            assert result.base_lng == 118.23672800
+            assert result.base_lat == 25.07728900
+            assert result.position_name == "福建农林大学安溪校区学生公寓A10号楼"
+    
+    def test_get_task_details_empty_positions(self, task_service):
+        """Test handling of empty signInPositions list."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "signInPositions": []
+        }
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response):
+            with patch.object(task_service.logger, 'warning') as mock_log:
+                result = task_service.get_task_details(12345)
+                
+                assert result is None
+                
+                # Verify warning was logged
+                warning_calls = [call for call in mock_log.call_args_list 
+                                 if '没有签到位置信息' in str(call)]
+                assert len(warning_calls) > 0
+    
+    def test_get_task_details_none_positions(self, task_service):
+        """Test handling of None signInPositions."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "signInPositions": None
+        }
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response):
+            with patch.object(task_service.logger, 'warning') as mock_log:
+                result = task_service.get_task_details(12345)
+                
+                assert result is None
+                
+                # Verify warning was logged
+                warning_calls = [call for call in mock_log.call_args_list 
+                                 if '没有签到位置信息' in str(call)]
+                assert len(warning_calls) > 0
+    
+    def test_get_task_details_missing_positions_key(self, task_service):
+        """Test handling of missing signInPositions key."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {}
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response):
+            with patch.object(task_service.logger, 'warning') as mock_log:
+                result = task_service.get_task_details(12345)
+                
+                assert result is None
+    
+    def test_get_task_details_network_error(self, task_service):
+        """Test handling of network errors."""
+        with patch.object(
+            task_service.client, 'get',
+            side_effect=requests.exceptions.ConnectionError("Connection failed")
+        ):
+            with patch.object(task_service.logger, 'error') as mock_log:
+                result = task_service.get_task_details(12345)
+                
+                assert result is None
+                
+                # Verify error was logged
+                error_calls = [call for call in mock_log.call_args_list 
+                               if '获取任务详情时发生异常' in str(call)]
+                assert len(error_calls) > 0
+    
+    def test_get_task_details_invalid_coordinates(self, task_service):
+        """Test handling of invalid coordinate values."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "signInPositions": [
+                {
+                    "id": 516208,
+                    "lng": "invalid",
+                    "lat": "invalid",
+                    "positionName": "Test Location"
+                }
+            ]
+        }
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response):
+            with patch.object(task_service.logger, 'error') as mock_log:
+                result = task_service.get_task_details(12345)
+                
+                assert result is None
+                
+                # Verify error was logged
+                error_calls = [call for call in mock_log.call_args_list 
+                               if '无法解析坐标' in str(call)]
+                assert len(error_calls) > 0
+    
+    def test_get_task_details_url_construction(self, task_service):
+        """Test that URL is constructed correctly."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "signInPositions": [
+                {
+                    "id": 516208,
+                    "lng": "118.23672800",
+                    "lat": "25.07728900",
+                    "positionName": "Test"
+                }
+            ]
+        }
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response) as mock_get:
+            task_service.get_task_details(12345)
+            
+            # Verify the URL was constructed correctly
+            call_args = mock_get.call_args
+            url = call_args[0][0]
+            
+            assert "/health-api/sign_in/12345" in url
+            assert "fromPage=0" in url
+    
+    def test_get_task_details_logs_success(self, task_service):
+        """Test that success message is logged."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "signInPositions": [
+                {
+                    "id": 516208,
+                    "lng": "118.23672800",
+                    "lat": "25.07728900",
+                    "positionName": "Test Location"
+                }
+            ]
+        }
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response):
+            with patch.object(task_service.logger, 'info') as mock_log:
+                task_service.get_task_details(12345)
+                
+                # Verify success message was logged
+                success_calls = [call for call in mock_log.call_args_list 
+                                 if '成功获取任务' in str(call)]
+                assert len(success_calls) > 0
+    
+    def test_get_task_details_logs_url(self, task_service):
+        """Test that URL is logged."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "signInPositions": [
+                {
+                    "id": 516208,
+                    "lng": "118.23672800",
+                    "lat": "25.07728900",
+                    "positionName": "Test"
+                }
+            ]
+        }
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response):
+            with patch.object(task_service.logger, 'info') as mock_log:
+                task_service.get_task_details(12345)
+                
+                # Verify URL was logged
+                url_calls = [call for call in mock_log.call_args_list 
+                             if '请求任务详情 URL' in str(call)]
+                assert len(url_calls) > 0
+    
+    def test_get_task_details_float_conversion_with_strings(self, task_service):
+        """Test that string coordinates are properly converted to float."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "signInPositions": [
+                {
+                    "id": 516208,
+                    "lng": "118.23672800",
+                    "lat": "25.07728900",
+                    "positionName": "Test"
+                }
+            ]
+        }
+        
+        with patch.object(task_service.client, 'get', return_value=mock_response):
+            result = task_service.get_task_details(12345)
+            
+            assert result is not None
+            assert isinstance(result.base_lng, float)
+            assert isinstance(result.base_lat, float)
+            assert result.base_lng == 118.23672800
+            assert result.base_lat == 25.07728900
