@@ -11,16 +11,7 @@ import pytest
 import requests
 
 from fafu_auto_sign.client import FAFUClient
-from fafu_auto_sign.config import AppConfig, LocationConfig
-
-import sys
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
-import requests
-
-from fafu_auto_sign.client import FAFUClient
-from fafu_auto_sign.config import AppConfig, LocationConfig
+from fafu_auto_sign.config import AppConfig
 
 
 @pytest.fixture
@@ -28,7 +19,6 @@ def mock_config():
     """Create a mock AppConfig for testing."""
     return AppConfig(
         user_token="2_TEST_TOKEN",
-        location=LocationConfig(lng=118.237686, lat=25.077727, jitter=0.00005),
         base_url="http://stuhtapi.fafu.edu.cn",
     )
 

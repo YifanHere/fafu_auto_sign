@@ -57,11 +57,32 @@ def run(config_path: str = "config.json") -> None:
                 task_id = task_service.get_pending_task()
                 
                 if task_id:
+                    # 获取任务详情（包含位置信息）
+                    task_details = task_service.get_task_details(task_id)
+                    if task_details is None:
+                        logger.warning(f"任务 {task_id} 无地理位置限制，跳过签到")
+                        if shutdown.wait(900):
+                            break
+                        continue
+                    
+                    logger.info(f"获取到签到位置：{task_details.position_name}")
+                    
                     # 上传图片
                     img_url = upload_service.upload_image(config.image_path)
-                    if img_url:
-                        # 提交签到
-                        sign_service.submit_sign(task_id, img_url)
+                    if not img_url:
+                        continue
+                    
+                    # 提交签到（使用动态位置参数）
+                    success = sign_service.submit_sign(
+                        task_id=task_id,
+                        position_id=task_details.position_id,
+                        base_lng=task_details.base_lng,
+                        base_lat=task_details.base_lat,
+                        image_url=img_url
+                    )
+                    
+                    if success:
+                        logger.info(f"签到成功！位置：{task_details.position_name}")
                 else:
                     logger.info("心跳保活成功，未发现任务。睡眠 15 分钟...")
                 
