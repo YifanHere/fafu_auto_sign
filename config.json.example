@@ -1,13 +1,8 @@
 {
   "user_token": "2_YOUR_TOKEN_HERE",
-  "location": {
-    "lng": 118.237686,
-    "lat": 25.077727,
-    "jitter": 5e-05
-  },
+  "jitter": 5e-05,
   "image_path": "dorm.jpg",
   "base_url": "http://stuhtapi.fafu.edu.cn",
   "heartbeat_interval": 900,
-  "sign_in_position_id": 516208,
   "log_level": "INFO"
 }

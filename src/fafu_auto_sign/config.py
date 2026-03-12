@@ -9,40 +9,8 @@ import os
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class LocationConfig(BaseModel):
-    """Location configuration with coordinate validation."""
-    
-    lng: float = Field(..., description="Longitude (-180 to 180)")
-    lat: float = Field(..., description="Latitude (-90 to 90)")
-    jitter: float = Field(default=0.00005, description="Maximum jitter amount (0 to 0.001)")
-    
-    @field_validator("lng")
-    @classmethod
-    def validate_longitude(cls, v: float) -> float:
-        """Validate longitude is within valid range."""
-        if not -180 <= v <= 180:
-            raise ValueError(f"Longitude must be between -180 and 180, got {v}")
-        return v
-    
-    @field_validator("lat")
-    @classmethod
-    def validate_latitude(cls, v: float) -> float:
-        """Validate latitude is within valid range."""
-        if not -90 <= v <= 90:
-            raise ValueError(f"Latitude must be between -90 and 90, got {v}")
-        return v
-    
-    @field_validator("jitter")
-    @classmethod
-    def validate_jitter(cls, v: float) -> float:
-        """Validate jitter is within valid range."""
-        if not 0 <= v <= 0.001:
-            raise ValueError(f"Jitter must be between 0 and 0.001, got {v}")
-        return v
 
 
 class AppConfig(BaseSettings):
@@ -64,13 +32,12 @@ class AppConfig(BaseSettings):
     
     # Required fields
     user_token: str = Field(..., description="User token (must start with '2_')")
-    location: LocationConfig = Field(..., description="Location configuration")
     
     # Optional fields with defaults
+    jitter: float = Field(default=0.00005, description="Maximum jitter amount for location (0 to 0.001)")
     image_path: str = Field(default="dorm.jpg", description="Path to dormitory image")
     base_url: str = Field(default="http://stuhtapi.fafu.edu.cn", description="API base URL")
     heartbeat_interval: int = Field(default=900, description="Heartbeat interval in seconds")
-    sign_in_position_id: int = Field(default=516208, description="Sign-in position ID")
     log_level: str = Field(default="INFO", description="Logging level")
     
     @field_validator("user_token")
@@ -79,6 +46,13 @@ class AppConfig(BaseSettings):
         """Validate user token starts with '2_'."""
         if not v.startswith("2_"):
             raise ValueError(f"User token must start with '2_', got: {v[:20]}...")
+        return v
+    @field_validator("jitter")
+    @classmethod
+    def validate_jitter(cls, v: float) -> float:
+        """Validate jitter is within valid range."""
+        if not 0 <= v <= 0.001:
+            raise ValueError(f"Jitter must be between 0 and 0.001, got {v}")
         return v
     
     @field_validator("log_level")
@@ -89,6 +63,7 @@ class AppConfig(BaseSettings):
         if v.upper() not in valid_levels:
             raise ValueError(f"Log level must be one of {valid_levels}, got {v}")
         return v.upper()
+
 
 
 def load_config(config_path: str | Path | None = None) -> AppConfig:
@@ -125,29 +100,17 @@ def load_config(config_path: str | Path | None = None) -> AppConfig:
     if os.environ.get("FAFU_USER_TOKEN"):
         config_dict["user_token"] = os.environ.get("FAFU_USER_TOKEN")
     
-    # Handle nested location config from environment variables
-    location = config_dict.get("location", {})
-    if os.environ.get("FAFU_LOCATION__LNG"):
-        location["lng"] = float(os.environ.get("FAFU_LOCATION__LNG"))
-    if os.environ.get("FAFU_LOCATION__LAT"):
-        location["lat"] = float(os.environ.get("FAFU_LOCATION__LAT"))
-    if os.environ.get("FAFU_LOCATION__JITTER"):
-        location["jitter"] = float(os.environ.get("FAFU_LOCATION__JITTER"))
-    if location:
-        config_dict["location"] = location
-    
     # Handle other top-level environment variables
+    if os.environ.get("FAFU_JITTER"):
+        config_dict["jitter"] = float(os.environ.get("FAFU_JITTER"))
     if os.environ.get("FAFU_IMAGE_PATH"):
         config_dict["image_path"] = os.environ.get("FAFU_IMAGE_PATH")
     if os.environ.get("FAFU_BASE_URL"):
         config_dict["base_url"] = os.environ.get("FAFU_BASE_URL")
     if os.environ.get("FAFU_HEARTBEAT_INTERVAL"):
         config_dict["heartbeat_interval"] = int(os.environ.get("FAFU_HEARTBEAT_INTERVAL"))
-    if os.environ.get("FAFU_SIGN_IN_POSITION_ID"):
-        config_dict["sign_in_position_id"] = int(os.environ.get("FAFU_SIGN_IN_POSITION_ID"))
     if os.environ.get("FAFU_LOG_LEVEL"):
         config_dict["log_level"] = os.environ.get("FAFU_LOG_LEVEL")
-    
     return AppConfig(**config_dict)
 
 
@@ -159,15 +122,10 @@ def create_example_config(path: str | Path = "config.json.example") -> None:
     """
     example_config = {
         "user_token": "2_YOUR_TOKEN_HERE",
-        "location": {
-            "lng": 118.237686,
-            "lat": 25.077727,
-            "jitter": 0.00005
-        },
+        "jitter": 0.00005,
         "image_path": "dorm.jpg",
         "base_url": "http://stuhtapi.fafu.edu.cn",
         "heartbeat_interval": 900,
-        "sign_in_position_id": 516208,
         "log_level": "INFO"
     }
     

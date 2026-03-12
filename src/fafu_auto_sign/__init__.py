@@ -2,11 +2,9 @@
 
 __version__ = "0.1.0"
 
-from fafu_auto_sign.config import AppConfig, LocationConfig, load_config
-
-__all__ = ["AppConfig", "LocationConfig", "load_config"]
+from fafu_auto_sign.config import AppConfig, load_config
 from fafu_auto_sign.logging_config import setup_logging
 from fafu_auto_sign.client import FAFUClient
-
-__all__ = ["AppConfig", "LocationConfig", "load_config", "setup_logging", "FAFUClient", "GracefulShutdown"]
 from fafu_auto_sign.graceful_shutdown import GracefulShutdown
+
+__all__ = ["AppConfig", "load_config", "setup_logging", "FAFUClient", "GracefulShutdown"]
