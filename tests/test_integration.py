@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from fafu_auto_sign.client import FAFUClient
 from fafu_auto_sign.config import AppConfig, load_config
 from fafu_auto_sign.services import TaskService, SignService
+from fafu_auto_sign.services.task_service import TaskDetails
 from fafu_auto_sign.services.upload_service import UploadService
 from fafu_auto_sign.crypto import generate_auth_header
 
@@ -17,11 +18,10 @@ def create_test_config(tmp_path):
     """Helper to create test config and image."""
     config_data = {
         "user_token": "2_test_token_12345",
-        "location": {"lng": 118.237686, "lat": 25.077727, "jitter": 5e-05},
+        "jitter": 0.00005,
         "image_path": str(tmp_path / "test.jpg"),
         "base_url": "http://test.example.com",
         "heartbeat_interval": 900,
-        "sign_in_position_id": 516208,
         "log_level": "INFO"
     }
     config_file = tmp_path / "config.json"
@@ -48,13 +48,25 @@ class TestIntegrationWorkflow:
         mock_task_response = Mock()
         mock_task_response.json.return_value = {
             "records": [{
-                "id": "task_123",
+                "id": 123,
                 "name": "晚归签到",
                 "beginTime": 0,
                 "endTime": 9999999999999
             }]
         }
         mock_task_response.status_code = 200
+        
+        # Mock task details response
+        mock_task_details_response = Mock()
+        mock_task_details_response.json.return_value = {
+            "signInPositions": [{
+                "id": 516208,
+                "lng": "118.237686",
+                "lat": "25.077727",
+                "positionName": "测试位置"
+            }]
+        }
+        mock_task_details_response.status_code = 200
         
         # Mock upload response
         mock_upload_response = Mock()
@@ -68,6 +80,7 @@ class TestIntegrationWorkflow:
         
         mock_session.request.side_effect = [
             mock_task_response,
+            mock_task_details_response,
             mock_upload_response,
             mock_sign_response
         ]
@@ -78,14 +91,27 @@ class TestIntegrationWorkflow:
         
         # Step 1: Get task
         task_id = task_service.get_pending_task()
-        assert task_id == "task_123"
+        assert task_id == "123"
         
-        # Step 2: Upload image
+        # Step 2: Get task details
+        task_details = task_service.get_task_details(int(task_id))
+        assert task_details is not None
+        assert task_details.position_id == 516208
+        assert task_details.base_lng == 118.237686
+        assert task_details.base_lat == 25.077727
+        
+        # Step 3: Upload image
         img_url = upload_service.upload_image(config.image_path)
         assert img_url == "http://qiniu.com/image.jpg"
         
-        # Step 3: Submit sign
-        result = sign_service.submit_sign(task_id, img_url)
+        # Step 4: Submit sign with new API
+        result = sign_service.submit_sign(
+            int(task_id),
+            task_details.position_id,
+            task_details.base_lng,
+            task_details.base_lat,
+            img_url
+        )
         assert result is True
 
     def test_no_pending_task_scenario(self, tmp_path):
@@ -164,15 +190,10 @@ class TestMainModuleIntegration:
         with open(config_file, "w") as f:
             json.dump({
                 "user_token": config.user_token,
-                "location": {
-                    "lng": config.location.lng,
-                    "lat": config.location.lat,
-                    "jitter": config.location.jitter
-                },
+                "jitter": config.jitter,
                 "image_path": config.image_path,
                 "base_url": config.base_url,
                 "heartbeat_interval": config.heartbeat_interval,
-                "sign_in_position_id": config.sign_in_position_id,
                 "log_level": config.log_level
             }, f)
         
@@ -203,6 +224,29 @@ class TestConfigIntegration:
     """Integration tests for configuration loading."""
 
     def test_load_config_from_file(self, tmp_path):
+        """Test loading config from JSON file."""
+        config = create_test_config(tmp_path)
+        
+        assert config.user_token == "2_test_token_12345"
+        assert config.jitter == 0.00005
+        assert config.image_path == str(tmp_path / "test.jpg")
+        assert config.base_url == "http://test.example.com"
+        assert config.heartbeat_interval == 900
+        assert config.log_level == "INFO"
+        
+    def test_config_missing_required_fields(self, tmp_path):
+        """Test config validation for missing required fields."""
+        config_data = {
+            "jitter": 0.00005,
+            "image_path": "test.jpg"
+            # Missing user_token
+        }
+        config_file = tmp_path / "invalid_config.json"
+        with open(config_file, "w") as f:
+            json.dump(config_data, f)
+        
+        with pytest.raises(ValidationError):
+            load_config(str(config_file))
         """Test loading config from JSON file."""
         config = create_test_config(tmp_path)
         
