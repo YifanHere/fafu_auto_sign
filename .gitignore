@@ -124,3 +124,7 @@ dmypy.json
 .pyre/
 
 dorm.jpg
+
+.sisyphus/
+
+config.json

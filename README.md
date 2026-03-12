@@ -21,44 +21,75 @@
 3. **使用者因滥用本项目引发的一切后果与责任由使用者本人自行承担，开发者不承担任何直接或间接责任**。
 
 ### 🛠️ 快速开始
+
 1. **环境准备**
 
-    请确保你的电脑或服务器已安装 Python 3.6 或更高版本。
-    
-    安装必需的第三方库：
+    请确保你的电脑或服务器已安装 Python 3.8 或更高版本。
+
+2. **安装**
+    ```bash
+    # 克隆项目
+git clone https://github.com/yourusername/fafu_auto_sign.git
+cd fafu_auto_sign
+
+    # 以可编辑模式安装
+    pip install -e .
     ```
-    pip install requests
-    ```
-2. **获取你的专属 USER_TOKEN (需抓包)**
-    
+
+3. **获取你的专属 USER_TOKEN (需抓包)**
+
     由于涉及华为 WeLink 企业级授权，首次使用需手动抓取属于你的 Token：
     1. 在手机上安装抓包工具（如 iOS 的 Stream，Android 的 ProxyPin/HttpCanary 或电脑端的 Fiddler/Charles）。
-    2. 开启抓包，打开“数字FAFU” APP，进入“健康申报/晚归签到”页面刷新一下。
-    3. 在抓包记录中找到域名为 ```stuhtapi.fafu.edu.cn``` 的请求。
-    4. 查看请求头（Headers）中的 ```Authorization``` 字段，你会看到一长串字符（如：```MTc3M...```）。
-    5. 找一个在线 Base64 解码网站，将这串字符解码。解码后长这样：```1773238142:lnccKsR2ovQ4rbQk:c0a6d234c538193226291c5be73c3461:2_6120909285C95C2DA0CA32C6A2AC76CD```
-    6. **提取以 2_ 开头的最后一段**（即 ```2_6120909285C95C2DA0CA32C6A2AC76CD```），这就是你的 USER_TOKEN！
-3. **配置脚本**
-    1. 将本项目克隆或下载到本地。
-    2. 用文本编辑器打开 ```fafu_auto_sign.py```，修改顶部配置区：
-        ```
-        # 填入你刚刚抓包获取到的 User Token
-        USER_TOKEN = "$YOUR_TOKEN_HERE$"
+    2. 开启抓包，打开"数字FAFU" APP，进入"健康申报/晚归签到"页面刷新一下。
+    3. 在抓包记录中找到域名为 `stuhtapi.fafu.edu.cn` 的请求。
+    4. 查看请求头（Headers）中的 `Authorization` 字段，你会看到一长串字符（如：`MTc3M...`）。
+    5. 找一个在线 Base64 解码网站，将这串字符解码。解码后长这样：`1773238142:lnccKsR2ovQ4rbQk:c0a6d234c538193226291c5be73c3461:2_6120909285C95C2DA0CA32C6A2AC76CD`
+    6. **提取以 2_ 开头的最后一段**（即 `2_6120909285C95C2DA0CA32C6A2AC76CD`），这就是你的 USER_TOKEN！
 
-        # 伪造坐标
-        # 可前往“高德坐标拾取器/经纬度查询定位”等在线工具获取你真实宿舍的经纬度
-        TARGET_LNG = 118.237686
-        TARGET_LAT = 25.077727
-        ```
-    3. 在脚本**同级目录**下，放一张你在宿舍拍摄的照片，并命名为 ```dorm.jpg```。
-4. **运行**
+4. **配置**
+
+    复制配置文件模板并编辑：
+    ```bash
+    cp config.json.example config.json
+    # 编辑 config.json，填入你的配置
     ```
-    python fafu_auto_sign.py
+
+    `config.json` 格式说明：
+    ```json
+    {
+      "user_token": "2_YOUR_TOKEN_HERE",
+      "location": {
+        "lng": 118.237686,
+        "lat": 25.077727,
+        "jitter": 0.00005
+      },
+      "image_path": "dorm.jpg",
+      "base_url": "http://stuhtapi.fafu.edu.cn",
+      "heartbeat_interval": 900,
+      "sign_in_position_id": 516208,
+      "log_level": "INFO"
+    }
     ```
-    💡 **建议**：由于本脚本自带“心跳保活”死循环机制（每 15 分钟运行一次），建议将其部署在 24 小时开机的云服务器、树莓派或软路由上。在 Linux 下可使用 ```nohup``` 命令使其在后台持续运行：
+
+5. **运行**
+
+    ```bash
+    # 使用默认配置文件 (config.json)
+    python -m fafu_auto_sign
+
+    # 指定配置文件路径
+    python -m fafu_auto_sign --config /path/to/config.json
+    # 或简写
+    python -m fafu_auto_sign -c /path/to/config.json
     ```
-    nohup python3 fafu_auto_sign.py > sign.log 2>&1 &
+
+    💡 **建议**：由于本程序自带"心跳保活"机制（每 15 分钟运行一次），建议将其部署在 24 小时开机的云服务器、树莓派或软路由上。在 Linux 下可使用 `nohup` 命令使其在后台持续运行：
+    ```bash
+    nohup python -m fafu_auto_sign > sign.log 2>&1 &
     ```
+
+    💡 **旧版脚本**：如果你需要使用旧版单文件脚本，可以在 `backup/fafu_auto_sign_legacy.py` 找到。
+
 
 ### 🔬 技术内幕 (How it works)
 对于爱好技术的同学，本脚本的核心难点在于攻破系统的接口安全校验。
