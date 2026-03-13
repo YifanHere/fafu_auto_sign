@@ -101,14 +101,16 @@ def load_config(config_path: str | Path | None = None) -> AppConfig:
         config_dict["user_token"] = os.environ.get("FAFU_USER_TOKEN")
     
     # 处理其他顶层环境变量
-    if os.environ.get("FAFU_JITTER"):
-        config_dict["jitter"] = float(os.environ.get("FAFU_JITTER"))
+    jitter_env = os.environ.get("FAFU_JITTER")
+    if jitter_env:
+        config_dict["jitter"] = float(jitter_env)
     if os.environ.get("FAFU_IMAGE_PATH"):
         config_dict["image_path"] = os.environ.get("FAFU_IMAGE_PATH")
     if os.environ.get("FAFU_BASE_URL"):
         config_dict["base_url"] = os.environ.get("FAFU_BASE_URL")
-    if os.environ.get("FAFU_HEARTBEAT_INTERVAL"):
-        config_dict["heartbeat_interval"] = int(os.environ.get("FAFU_HEARTBEAT_INTERVAL"))
+    interval_env = os.environ.get("FAFU_HEARTBEAT_INTERVAL")
+    if interval_env:
+        config_dict["heartbeat_interval"] = int(interval_env)
     if os.environ.get("FAFU_LOG_LEVEL"):
         config_dict["log_level"] = os.environ.get("FAFU_LOG_LEVEL")
     

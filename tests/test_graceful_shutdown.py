@@ -228,7 +228,7 @@ class TestGracefulShutdown:
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
-            wait_result = [None]
+            wait_result: list[bool | None] = [None]
             
             def wait_thread():
                 wait_result[0] = gs.wait(timeout=10.0)

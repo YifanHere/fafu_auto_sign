@@ -57,7 +57,7 @@ def run(config_path: str = "config.json") -> None:
                 
                 if task_id:
                     # 获取任务详情（包含位置信息）
-                    task_details = task_service.get_task_details(task_id)
+                    task_details = task_service.get_task_details(int(task_id))
                     if task_details is None:
                         logger.warning(f"任务 {task_id} 无地理位置限制，跳过签到")
                         if shutdown.wait(900):
@@ -73,7 +73,7 @@ def run(config_path: str = "config.json") -> None:
                     
                     # 提交签到（使用动态位置参数）
                     success = sign_service.submit_sign(
-                        task_id=task_id,
+                        task_id=int(task_id),
                         position_id=task_details.position_id,
                         base_lng=task_details.base_lng,
                         base_lat=task_details.base_lat,

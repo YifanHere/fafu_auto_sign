@@ -247,20 +247,13 @@ class TestConfigIntegration:
         
         with pytest.raises(ValidationError):
             load_config(str(config_file))
-        """测试从JSON文件加载配置。"""
-        config = create_test_config(tmp_path)
-        
-        assert config.user_token == "2_test_token_12345"
-        assert config.location.lng == 118.237686
-        assert config.location.lat == 25.077727
-        assert config.image_path == str(tmp_path / "test.jpg")
-        assert config.base_url == "http://test.example.com"
 
-    def test_config_missing_required_fields(self, tmp_path):
-        """测试缺失必需字段的配置验证。"""
+    def test_config_invalid_token_format(self, tmp_path):
+        """测试无效令牌格式的配置验证。"""
         config_data = {
-            "location": {"lng": 118.237686, "lat": 25.077727}
-            # 缺少user_token, image_path, etc.
+            "user_token": "invalid_token_without_prefix",
+            "jitter": 0.00005,
+            "image_path": "test.jpg"
         }
         config_file = tmp_path / "invalid_config.json"
         with open(config_file, "w") as f:

@@ -4,6 +4,7 @@
 
 import json
 import logging
+import logging.handlers  # noqa: F401
 import os
 import tempfile
 import shutil
@@ -101,6 +102,7 @@ class TestLoggingConfig:
         setup_logging(log_dir=str(self.log_dir))
         
         # 查找文件处理器
+        file_handler: logging.handlers.TimedRotatingFileHandler | None = None
         file_handler = None
         for handler in logging.getLogger().handlers:
             if isinstance(handler, logging.handlers.TimedRotatingFileHandler):
@@ -117,6 +119,7 @@ class TestLoggingConfig:
         setup_logging(log_dir=str(self.log_dir))
         
         # 查找控制台处理器
+        console_handler: logging.StreamHandler | None = None
         console_handler = None
         for handler in logging.getLogger().handlers:
             if isinstance(handler, logging.StreamHandler) and \
@@ -132,6 +135,7 @@ class TestLoggingConfig:
         setup_logging(log_dir=str(self.log_dir))
         
         # 查找文件处理器
+        file_handler: logging.handlers.TimedRotatingFileHandler | None = None
         file_handler = None
         for handler in logging.getLogger().handlers:
             if isinstance(handler, logging.handlers.TimedRotatingFileHandler):
