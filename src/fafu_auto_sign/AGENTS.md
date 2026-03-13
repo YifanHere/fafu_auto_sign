@@ -30,7 +30,7 @@ main.py
 | `FAFUClient` | `client.py` | HTTP客户端，指数退避重试，401/408直接exit |
 | `TaskService` | `services/task_service.py` | 获取任务列表，过滤"晚归"关键词，时间窗口判断 |
 | `SignService` | `services/sign_service.py` | GPS抖动提交签到，坐标格式化为6位小数 |
-| `UploadService` | `services/upload_service.py` | 上传图片到七牛云，使用`with open()`确保关闭 |
+| `UploadService` | `services/upload_service.py` | 上传图片到七牛云，支持从目录随机选择，使用`with open()`确保关闭 |
 | `GracefulShutdown` | `graceful_shutdown.py` | SIGINT/SIGTERM处理，15分钟wait或立即退出 |
 
 ---
@@ -60,7 +60,48 @@ task_service.get_task_details(task_id)  # 返回TaskDetails或None
 # 提取signInPositions[0]的坐标和位置名称
 ```
 
+### upload_service.py
+
+```python
+SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}  # 支持的图片格式
+
+UploadService._get_image_files(image_dir: str) -> list[str]  # 扫描目录获取图片列表
+# 过滤隐藏文件，按扩展名筛选，返回排序后的完整路径列表
+
+UploadService._select_random_image(image_files: list[str]) -> Optional[str]  # 随机选择
+# 使用 random.choice，空列表返回 None
+
+UploadService.upload_image(image_path: str) -> Optional[str]  # 上传图片
+# 优先检查 image_dir 配置，存在则从目录随机选择，否则使用 image_path（向后兼容）
+```
+
 ---
+
+## 多图片随机选择机制
+
+新增功能：支持从指定目录随机选择图片，避免长期使用同一张照片被识别。
+
+### 配置方式
+```python
+# config.py - AppConfig 新增字段
+image_dir: Optional[str] = None  # 图片目录路径
+# 优先级：image_dir > image_path（向后兼容）
+```
+
+### 环境变量支持
+```bash
+export FAFU_IMAGE_DIR="./photos/"  # 图片目录路径
+```
+
+### 图片选择流程
+1. `upload_image()` 检查 `self.client.config.image_dir`
+2. 如果配置存在：调用 `_get_image_files()` 扫描目录
+3. 调用 `_select_random_image()` 从列表中随机选择
+4. 如果未配置 `image_dir`：使用原有的 `image_path`（向后兼容）
+
+---
+
+
 
 ## 签名算法详情
 

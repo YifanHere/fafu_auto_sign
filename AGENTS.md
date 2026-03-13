@@ -40,7 +40,8 @@ fafu_auto_sign/
 | **调整重试逻辑** | `client.py` | `FAFUClient.request()` |
 | **修改签到逻辑** | `services/sign_service.py` | `SignService.submit_sign()` |
 | **修改任务识别** | `services/task_service.py` | `TaskService.get_pending_task()` |
-| **修改图片上传** | `services/upload_service.py` | `UploadService.upload_image()` |
+| 修改图片上传 | `services/upload_service.py` | `UploadService.upload_image()`, `SUPPORTED_EXTENSIONS` |
+| 添加多图片支持 | `config.py` + `upload_service.py` | `image_dir` 配置 + 目录扫描 + 随机选择 |
 | **修改日志格式** | `logging_config.py` | `setup_logging()` |
 | **修改关闭逻辑** | `graceful_shutdown.py` | `GracefulShutdown` 类 |
 | **修改主循环** | `main.py` | `run()` 函数 |
