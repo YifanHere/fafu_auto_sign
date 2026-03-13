@@ -94,11 +94,29 @@ class FAFUClient:
                 
                 # 处理会终止程序的特殊状态码
                 if response.status_code == 401:
-                    self.logger.error("Token 已过期，请重新抓包获取并更新配置文件！")
+                    self.logger.error("[x] Token已过期，请重新抓包获取并更新配置文件！")
+                    # 发送通知（如果启用）
+                    if getattr(self.config, 'notification_enabled', False):
+                        from fafu_auto_sign.services.notification_service import NotificationService
+                        notification_service = NotificationService(self.config)
+                        notification_service.notify(
+                            title="紧急：Token已过期",
+                            content="Token已过期，请重新抓包获取并更新配置文件！",
+                            success=False
+                        )
                     sys.exit(1)
                 
                 if response.status_code == 408:
-                    self.logger.error("运行脚本的系统时间与标准北京时间不一致，签名校验失败，请校准系统时间！")
+                    self.logger.error("[x] 系统时间不同步，请校准系统时间！")
+                    # 发送通知（如果启用）
+                    if getattr(self.config, 'notification_enabled', False):
+                        from fafu_auto_sign.services.notification_service import NotificationService
+                        notification_service = NotificationService(self.config)
+                        notification_service.notify(
+                            title="紧急：系统时间不同步",
+                            content="运行脚本的系统时间与标准北京时间不一致，签名校验失败，请校准系统时间！",
+                            success=False
+                        )
                     sys.exit(1)
                 
                 # 根据状态码检查是否应该重试

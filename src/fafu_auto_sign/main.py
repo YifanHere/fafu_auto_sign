@@ -12,8 +12,8 @@ from fafu_auto_sign.logging_config import setup_logging
 from fafu_auto_sign.client import FAFUClient
 from fafu_auto_sign.services import TaskService, SignService
 from fafu_auto_sign.services.upload_service import UploadService
+from fafu_auto_sign.services.notification_service import NotificationService
 from fafu_auto_sign.graceful_shutdown import GracefulShutdown
-
 
 def run(config_path: str = "config.json") -> None:
     """运行自动签到守护进程。
@@ -33,8 +33,13 @@ def run(config_path: str = "config.json") -> None:
     # 1. 加载配置
     config = load_config(config_path)
     
-    # 2. 设置日志
-    setup_logging(config.log_level)
+    # 2. 初始化通知服务（如果启用）
+    notification_service = None
+    if config.notification_enabled:
+        notification_service = NotificationService(config)
+    
+    # 3. 设置日志
+    setup_logging(config.log_level, notification_service=notification_service)
     logger = logging.getLogger(__name__)
     
     # 3. 创建客户端和服务
@@ -81,7 +86,9 @@ def run(config_path: str = "config.json") -> None:
                     )
                     
                     if success:
-                        logger.info(f"签到成功！位置：{task_details.position_name}")
+                        logger.info(f"✅ 签到成功！位置：{task_details.position_name}")
+                    else:
+                        logger.error(f"❌ 签到失败！位置：{task_details.position_name}")
                 else:
                     logger.info("心跳保活成功，未发现任务。睡眠 15 分钟...")
                 
