@@ -1,6 +1,6 @@
 ## 🏫 数字 FAFU 自动签到助手 (FAFU Auto Sign)
 
-![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg) ![License MIT](https://img.shields.io/badge/License-MIT-green.svg) ![Status Stable](https://img.shields.io/badge/Status-Stable-brightgreen.svg)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg) ![License MIT](https://img.shields.io/badge/License-MIT-green.svg) ![Status Stable](https://img.shields.io/badge/Status-Stable-brightgreen.svg)
 
 本项目是针对福建农林大学与华为 WeLink 合作推出的"数字FAFU" APP 所编写的**自动签到程序**。通过逆向分析其前端加密逻辑，本项目实现了完全脱离 APP 的纯接口级自动化签到。
 
@@ -32,7 +32,7 @@
 
 #### 1. 环境准备
 
-请确保你的电脑或服务器已安装 Python 3.8 或更高版本。
+请确保你的电脑或服务器已安装 Python 3.10 或更高版本。
 
 #### 2. 安装
 
