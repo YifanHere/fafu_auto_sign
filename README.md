@@ -24,6 +24,8 @@
 
 ✅ **健壮的重试机制**：客户端内置指数退避重试策略，自动处理网络抖动和临时服务不可用。
 
+✅ **微信推送通知**：集成 Server酱，支持签到成功/失败实时推送到微信，5分钟内同类型消息自动去重。
+
 ### 🚨 免责声明 (Disclaimer)
 
 1. 本项目开源仅为 Python 网络爬虫、JS 逆向工程及自动化测试技术的**学习与学术交流**。
@@ -93,6 +95,8 @@ export FAFU_JITTER="0.00005"
 export FAFU_IMAGE_PATH="dorm.jpg"
 export FAFU_BASE_URL="http://stuhtapi.fafu.edu.cn"
 export FAFU_HEARTBEAT_INTERVAL="900"
+export FAFU_NOTIFICATION_ENABLED="false"
+export FAFU_SERVERCHAN_KEY=""
 export FAFU_IMAGE_DIR="./photos/"  # 图片目录路径（启用随机选择）
 ```
 
@@ -112,6 +116,8 @@ $env:FAFU_USER_TOKEN="2_YOUR_TOKEN_HERE"
 | `base_url` | ❌ | `http://stuhtapi.fafu.edu.cn` | API 基础 URL |
 | `heartbeat_interval` | ❌ | `900` | 心跳间隔秒数（默认 15 分钟） |
 | `log_level` | ❌ | `INFO` | 日志级别（DEBUG/INFO/WARNING/ERROR/CRITICAL） |
+| `notification_enabled` | ❌ | `false` | 是否启用微信推送通知 |
+| `serverchan_key` | ❌ | - | Server酱 SendKey（启用通知时必需）|
 💡 **多图片配置示例**：
 
 如果你想使用多图片随机选择功能，可以在 `config.json` 中配置：
@@ -129,6 +135,38 @@ $env:FAFU_USER_TOKEN="2_YOUR_TOKEN_HERE"
 ```
 
 在 `./photos/` 目录中放入多张图片（支持 `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp` 格式），程序每次签到时会随机选择一张上传。
+
+#### 微信推送通知配置（可选）
+
+本项目支持通过 [Server酱](https://sct.ftqq.com/) 将签到状态实时推送到微信。
+
+**功能特点：**
+- 📱 签到成功/失败实时微信通知
+- 🔔 Token过期、系统时间错误等紧急情况即时告警
+- 🛡️ 5分钟内同类型消息自动去重，防止骚扰
+- ⚙️ 配置开关控制，随时启用/禁用
+
+**配置步骤：**
+
+1. **获取 SendKey**
+   - 访问 https://sct.ftqq.com/
+   - 微信扫码登录
+   - 复制 SendKey（格式如 `SCTxxxxx` 或 `SC3xxxxx`）
+
+2. **修改配置文件**
+   ```json
+   {
+     "user_token": "2_YOUR_TOKEN_HERE",
+     "notification_enabled": true,
+     "serverchan_key": "SCT1234567890abcdef"
+   }
+   ```
+
+3. **或使用环境变量**
+   ```bash
+   export FAFU_NOTIFICATION_ENABLED="true"
+   export FAFU_SERVERCHAN_KEY="SCT1234567890abcdef"
+   ```
 
 #### 6. 运行
 
@@ -205,7 +243,8 @@ fafu_auto_sign/
 │           ├── __init__.py
 │           ├── task_service.py  # 任务管理
 │           ├── sign_service.py  # 签到提交
-│           └── upload_service.py # 图片上传
+│           ├── upload_service.py # 图片上传
+│           └── notification_service.py  # 微信推送通知
 ├── tests/                       # 测试套件
 ├── config.json.example          # 配置文件模板
 ├── pyproject.toml               # 项目元数据和依赖
