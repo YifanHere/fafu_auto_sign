@@ -5,5 +5,7 @@
   "image_dir": "",
   "base_url": "http://stuhtapi.fafu.edu.cn",
   "heartbeat_interval": 900,
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "notification_enabled": false,
+  "serverchan_key": "SCTxxxxx"
 }
