@@ -18,6 +18,8 @@
 
 ✅ **自动图片上传**：支持自动读取配置的图片文件，对接七牛云接口实现静默上传与签到绑定。
 
+✅ **多图片随机选择**：支持从指定目录随机选择图片上传，避免长期使用同一张照片被识别，支持 `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp` 格式。
+
 ✅ **优雅关闭**：支持 SIGINT (Ctrl+C) 和 SIGTERM 信号优雅退出，确保资源正确释放。
 
 ✅ **健壮的重试机制**：客户端内置指数退避重试策略，自动处理网络抖动和临时服务不可用。
@@ -91,7 +93,7 @@ export FAFU_JITTER="0.00005"
 export FAFU_IMAGE_PATH="dorm.jpg"
 export FAFU_BASE_URL="http://stuhtapi.fafu.edu.cn"
 export FAFU_HEARTBEAT_INTERVAL="900"
-export FAFU_LOG_LEVEL="INFO"
+export FAFU_IMAGE_DIR="./photos/"  # 图片目录路径（启用随机选择）
 ```
 
 **Windows PowerShell:**
@@ -105,10 +107,28 @@ $env:FAFU_USER_TOKEN="2_YOUR_TOKEN_HERE"
 |--------|------|--------|------|
 | `user_token` | ✅ | - | 用户令牌（必须以 `2_` 开头） |
 | `jitter` | ❌ | `0.00005` | GPS 抖动量（0 到 0.001 之间） |
-| `image_path` | ❌ | `dorm.jpg` | 签到照片文件路径 |
+| `image_path` | ❌ | `dorm.jpg` | 签到照片文件路径（当未配置 `image_dir` 时使用） |
+| `image_dir` | ❌ | - | 图片目录路径，设置后将从目录中随机选择图片上传（优先级高于 `image_path`） |
 | `base_url` | ❌ | `http://stuhtapi.fafu.edu.cn` | API 基础 URL |
 | `heartbeat_interval` | ❌ | `900` | 心跳间隔秒数（默认 15 分钟） |
 | `log_level` | ❌ | `INFO` | 日志级别（DEBUG/INFO/WARNING/ERROR/CRITICAL） |
+💡 **多图片配置示例**：
+
+如果你想使用多图片随机选择功能，可以在 `config.json` 中配置：
+
+```json
+{
+  "user_token": "2_YOUR_TOKEN_HERE",
+  "jitter": 0.00005,
+  "image_dir": "./photos/",  // 设置为图片目录路径
+  "image_path": "dorm.jpg",   // 备用单图片（可选）
+  "base_url": "http://stuhtapi.fafu.edu.cn",
+  "heartbeat_interval": 900,
+  "log_level": "INFO"
+}
+```
+
+在 `./photos/` 目录中放入多张图片（支持 `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp` 格式），程序每次签到时会随机选择一张上传。
 
 #### 6. 运行
 

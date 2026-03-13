@@ -6,7 +6,7 @@ JSON 文件、环境变量和 .env 文件。
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -35,10 +35,25 @@ class AppConfig(BaseSettings):
     # 可选字段（带默认值）
     jitter: float = Field(default=0.00005, description="位置最大抖动量（0 到 0.001）")
     image_path: str = Field(default="dorm.jpg", description="宿舍照片路径")
+    image_dir: Optional[str] = Field(default=None, description="图片目录路径（随机选择图片）")
     base_url: str = Field(default="http://stuhtapi.fafu.edu.cn", description="API 基础 URL")
     heartbeat_interval: int = Field(default=900, description="心跳间隔（秒）")
     log_level: str = Field(default="INFO", description="日志级别")
     
+    @field_validator("image_dir")
+    @classmethod
+    def validate_image_dir(cls, v: Optional[str]) -> Optional[str]:
+        """验证图片目录存在且可读。"""
+        if v is not None:
+            path = Path(v)
+            if not path.exists():
+                raise ValueError(f"图片目录不存在: {v}")
+            if not path.is_dir():
+                raise ValueError(f"路径不是目录: {v}")
+            if not os.access(path, os.R_OK):
+                raise ValueError(f"图片目录不可读: {v}")
+        return v
+
     @field_validator("user_token")
     @classmethod
     def validate_token_format(cls, v: str) -> str:
@@ -106,6 +121,8 @@ def load_config(config_path: str | Path | None = None) -> AppConfig:
         config_dict["jitter"] = float(jitter_env)
     if os.environ.get("FAFU_IMAGE_PATH"):
         config_dict["image_path"] = os.environ.get("FAFU_IMAGE_PATH")
+    if os.environ.get("FAFU_IMAGE_DIR"):
+        config_dict["image_dir"] = os.environ.get("FAFU_IMAGE_DIR")
     if os.environ.get("FAFU_BASE_URL"):
         config_dict["base_url"] = os.environ.get("FAFU_BASE_URL")
     interval_env = os.environ.get("FAFU_HEARTBEAT_INTERVAL")
@@ -115,7 +132,6 @@ def load_config(config_path: str | Path | None = None) -> AppConfig:
         config_dict["log_level"] = os.environ.get("FAFU_LOG_LEVEL")
     
     return AppConfig(**config_dict)
-
 
 
 def create_example_config(path: str | Path = "config.json.example") -> None:
@@ -128,6 +144,7 @@ def create_example_config(path: str | Path = "config.json.example") -> None:
         "user_token": "2_YOUR_TOKEN_HERE",
         "jitter": 0.00005,
         "image_path": "dorm.jpg",
+        "image_dir": None,  # 设置为图片目录路径以启用随机选择功能
         "base_url": "http://stuhtapi.fafu.edu.cn",
         "heartbeat_interval": 900,
         "log_level": "INFO"

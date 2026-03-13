@@ -2,6 +2,7 @@
   "user_token": "2_YOUR_TOKEN_HERE",
   "jitter": 5e-05,
   "image_path": "dorm.jpg",
+  "image_dir": "",
   "base_url": "http://stuhtapi.fafu.edu.cn",
   "heartbeat_interval": 900,
   "log_level": "INFO"
