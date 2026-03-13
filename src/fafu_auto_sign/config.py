@@ -39,6 +39,9 @@ class AppConfig(BaseSettings):
     base_url: str = Field(default="http://stuhtapi.fafu.edu.cn", description="API 基础 URL")
     heartbeat_interval: int = Field(default=900, description="心跳间隔（秒）")
     log_level: str = Field(default="INFO", description="日志级别")
+    # 通知配置
+    notification_enabled: bool = Field(default=False, description="启用通知")
+    serverchan_key: Optional[str] = Field(default=None, description="Server酱 SendKey")
     
     @field_validator("image_dir")
     @classmethod
@@ -78,6 +81,15 @@ class AppConfig(BaseSettings):
         if v.upper() not in valid_levels:
             raise ValueError(f"日志级别必须是 {valid_levels} 之一，当前值: {v}")
         return v.upper()
+
+    @field_validator("serverchan_key")
+    @classmethod
+    def validate_serverchan_key(cls, v: Optional[str]) -> Optional[str]:
+        """验证 Server酱 SendKey 格式（以 SCT 或 sctp 开头）。"""
+        if v is not None:
+            if not v.startswith(("SCT", "sctp")):
+                raise ValueError(f"Server酱 SendKey 必须以 'SCT' 或 'sctp' 开头，当前值: {v[:20]}...")
+        return v
 
 
 
@@ -130,6 +142,11 @@ def load_config(config_path: str | Path | None = None) -> AppConfig:
         config_dict["heartbeat_interval"] = int(interval_env)
     if os.environ.get("FAFU_LOG_LEVEL"):
         config_dict["log_level"] = os.environ.get("FAFU_LOG_LEVEL")
+    notification_enabled_env = os.environ.get("FAFU_NOTIFICATION_ENABLED")
+    if notification_enabled_env:
+        config_dict["notification_enabled"] = notification_enabled_env.lower() in ("true", "1", "yes", "on")
+    if os.environ.get("FAFU_SERVERCHAN_KEY"):
+        config_dict["serverchan_key"] = os.environ.get("FAFU_SERVERCHAN_KEY")
     
     return AppConfig(**config_dict)
 
@@ -147,7 +164,9 @@ def create_example_config(path: str | Path = "config.json.example") -> None:
         "image_dir": None,  # 设置为图片目录路径以启用随机选择功能
         "base_url": "http://stuhtapi.fafu.edu.cn",
         "heartbeat_interval": 900,
-        "log_level": "INFO"
+        "log_level": "INFO",
+        "notification_enabled": False,
+        "serverchan_key": None  # Server酱 SendKey（以 SCT 开头）
     }
     
     with open(path, "w", encoding="utf-8") as f:
