@@ -16,7 +16,8 @@ main.py
   ├─ services/
   │   ├─ task_service.py (TaskService, TaskDetails)
   │   ├─ sign_service.py (SignService)
-  │   └─ upload_service.py (UploadService)
+  │   ├─ upload_service.py (UploadService)
+  │   └─ notification_service.py (NotificationService)  # 新增
   └─ graceful_shutdown.py (GracefulShutdown)
 ```
 
@@ -32,6 +33,7 @@ main.py
 | `SignService` | `services/sign_service.py` | GPS抖动提交签到，坐标格式化为6位小数 |
 | `UploadService` | `services/upload_service.py` | 上传图片到七牛云，支持从目录随机选择，使用`with open()`确保关闭 |
 | `GracefulShutdown` | `graceful_shutdown.py` | SIGINT/SIGTERM处理，15分钟wait或立即退出 |
+| `NotificationService` | `services/notification_service.py` | 微信推送通知，5分钟去重，非阻塞发送 |
 
 ---
 
@@ -75,6 +77,18 @@ UploadService.upload_image(image_path: str) -> Optional[str]  # 上传图片
 # 优先检查 image_dir 配置，存在则从目录随机选择，否则使用 image_path（向后兼容）
 ```
 
+### notification_service.py
+
+```python
+NotificationService(config: AppConfig)  # 初始化，验证 SendKey
+# notify(title, content, task_id, success) -> bool  # 发送通知（非阻塞）
+# _should_notify(task_id, success) -> bool  # 5分钟去重检查
+# _cleanup_expired()  # 清理过期去重记录
+
+# 使用 serverchan_sdk.sc_send() 发送消息
+# 自动检测 SendKey 格式（SC3 vs SCT）
+# 失败只记录日志，不抛出异常
+```
 ---
 
 ## 多图片随机选择机制
@@ -162,3 +176,6 @@ self.logger.error("[x] 错误: ...")    # 错误信息
 2. **修改重试次数**: 修改 `client.py` 的 `MAX_RETRIES`
 3. **修改心跳间隔**: 修改 `config.py` 的 `heartbeat_interval` 或环境变量
 4. **添加新服务**: 继承模式参考现有服务类，注入FAFUClient
+5. **添加通知功能**: 参考 `notification_service.py` 模式，使用局部导入避免循环依赖
+6. **修改通知配置**: 在 `config.py` 的 `AppConfig` 中添加字段，使用 `Field(default=False)`
+7. **集成通知到流程**: 在 `main.py` 初始化，在 `client.py` 致命错误前发送通知

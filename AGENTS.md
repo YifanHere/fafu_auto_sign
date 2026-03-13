@@ -22,7 +22,8 @@ fafu_auto_sign/
 │   └── services/                # 业务服务层
 │       ├── task_service.py      # 任务识别与管理
 │       ├── sign_service.py      # 签到提交（GPS抖动）
-│       └── upload_service.py    # 图片上传（七牛云）
+│       ├── upload_service.py    # 图片上传（七牛云）
+│       └── notification_service.py  # 微信推送通知（Server酱）
 ├── tests/                       # 测试套件
 ├── pyproject.toml               # 项目元数据与依赖
 ├── config.json                  # 用户配置文件（本地）
@@ -46,6 +47,10 @@ fafu_auto_sign/
 | **修改关闭逻辑** | `graceful_shutdown.py` | `GracefulShutdown` 类 |
 | **修改主循环** | `main.py` | `run()` 函数 |
 | **添加测试** | `tests/` | 使用 `conftest.py` fixtures |
+| **添加通知功能** | `services/notification_service.py` | `NotificationService` 类 |
+| **修改通知配置** | `config.py` | `notification_enabled`, `serverchan_key` |
+| **修改日志通知** | `logging_config.py` | `NotificationHandler` |
+| **集成通知流程** | `main.py`, `client.py` | 初始化 `NotificationService`, 致命错误前发送通知 |
 
 ---
 
@@ -177,6 +182,32 @@ nohup python -m fafu_auto_sign > sign.log 2>&1 &
 
 ---
 
+## 微信推送通知
+
+### 配置说明
+- `notification_enabled`: 是否启用微信推送（默认 false）
+- `serverchan_key`: Server酱 SendKey（启用时必需）
+
+### 功能特点
+- 签到成功/失败实时微信通知
+- Token过期、时间错误等紧急情况即时告警
+- 5分钟内同类型消息自动去重
+
+### 获取 SendKey
+1. 访问 https://sct.ftqq.com/
+2. 微信扫码登录
+3. 复制 SendKey（格式 SCTxxxxx）
+
+### 使用示例
+```json
+{
+  "notification_enabled": true,
+  "serverchan_key": "SCT1234567890"
+}
+```
+
+---
+
 ## 测试策略
 
 | 测试类型 | 文件模式 | 说明 |
@@ -204,3 +235,9 @@ Auth = Base64(Timestamp:Nonce:Sign:UserToken)
 
 ### 签到流程
 1. 获取待办任务 → 2. 获取任务详情（含位置）→ 3. 上传图片 → 4. 提交签到（含GPS抖动）
+
+### 通知服务逻辑
+- `NotificationService.notify()` - 发送微信推送（非阻塞）
+- `_should_notify()` - 5分钟去重检查（task_id + success）
+- `NotificationHandler` - 监听日志标记触发通知
+- 致命错误前发送通知（401/408状态码）
