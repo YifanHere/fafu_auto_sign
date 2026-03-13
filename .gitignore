@@ -132,3 +132,4 @@ config.json
 
 # VS Code 个人配置
 .vscode/
+logs/

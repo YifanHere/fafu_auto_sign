@@ -1,10 +1,8 @@
-"""Task service module for FAFU Auto Sign.
+"""FAFU 自动签到的任务服务模块。
 
-This module provides task identification and management functionality,
-including fetching pending tasks and filtering based on time windows
-and keywords.
+本模块提供任务识别和管理功能，
+包括获取待办任务以及基于时间窗口和关键词的过滤。
 """
-
 from dataclasses import dataclass
 import logging
 import time
@@ -15,14 +13,14 @@ from fafu_auto_sign.client import FAFUClient
 
 @dataclass
 class TaskDetails:
-    """Task details dataclass containing position information.
+    """包含位置信息的任务详情数据类。
     
-    Attributes:
-        task_id: The ID of the task
-        position_id: The ID of the sign-in position
-        base_lng: Base longitude coordinate (float)
-        base_lat: Base latitude coordinate (float)
-        position_name: Human-readable position name
+    属性:
+        task_id: 任务的 ID
+        position_id: 签到位置的 ID
+        base_lng: 基准经度坐标（浮点数）
+        base_lat: 基准纬度坐标（浮点数）
+        position_name: 人类可读的位置名称
     """
     task_id: int
     position_id: int
@@ -32,51 +30,50 @@ class TaskDetails:
 
 
 class TaskService:
-    """Service for task identification and management.
+    """任务识别和管理服务。
     
-    This service handles:
-    - Fetching task lists from the API
-    - Filtering tasks based on time windows
-    - Matching tasks by keywords (e.g., "晚归")
-    - Detailed logging of task processing
+    本服务处理：
+    - 从 API 获取任务列表
+    - 基于时间窗口过滤任务
+    - 通过关键词匹配任务（如 "晚归"）
+    - 任务处理的详细日志记录
     
-    Attributes:
-        client: FAFUClient instance for making HTTP requests
-        logger: Logger instance for this service
+    属性:
+        client: 用于发起 HTTP 请求的 FAFUClient 实例
+        logger: 本服务的日志记录器实例
     """
     
-    # API endpoint for fetching task list
+    # 获取任务列表的 API 端点
     TASK_LIST_ENDPOINT = "/health-api/sign_in/student/my/page"
     
-    # Default pagination parameters
+    # 默认分页参数
     DEFAULT_ROWS = 50
     DEFAULT_PAGE = 1
-    DEFAULT_SIGN_STATE = 0  # Unsigned tasks
+    DEFAULT_SIGN_STATE = 0  # 未签到的任务
     
     def __init__(self, client: FAFUClient):
-        """Initialize the task service.
+        """初始化任务服务。
         
-        Args:
-            client: FAFUClient instance for making HTTP requests.
+        参数:
+            client: 用于发起 HTTP 请求的 FAFUClient 实例。
         """
         self.client = client
         self.logger = logging.getLogger(self.__class__.__name__)
     
     def get_pending_task(self) -> Optional[str]:
-        """Get the pending task ID for "晚归" sign-in.
+        """获取 "晚归" 签到的待办任务 ID。
         
-        This method fetches the task list from the API, then filters
-        tasks based on:
-        1. Time window: begin_time <= current_time <= end_time
-        2. Keyword matching: "晚归" in task_name
+        本方法从 API 获取任务列表，然后基于以下条件过滤任务：
+        1. 时间窗口：begin_time <= 当前时间 <= end_time
+        2. 关键词匹配：任务名称中包含 "晚归"
         
-        Returns:
-            The task ID (str) if a matching task is found, None otherwise.
+        返回:
+            如果找到匹配的任务则返回任务 ID（字符串），否则返回 None。
             
-        Raises:
-            RequestException: If the HTTP request fails (handled by client)
+        异常:
+            RequestException: 如果 HTTP 请求失败（由客户端处理）
         """
-        # Build the URL with query parameters
+        # 使用查询参数构建 URL
         url = (
             f"{self.TASK_LIST_ENDPOINT}"
             f"?rows={self.DEFAULT_ROWS}"
@@ -87,104 +84,104 @@ class TaskService:
         self.logger.info(f"[*] 请求 URL: {url}")
         
         try:
-            # Make the POST request to fetch task list
-            # Note: The API requires POST method with form-encoded body,
-            # but no body parameters are needed for this endpoint
+            # 发起 POST 请求获取任务列表
+            # 注意：API 需要使用 POST 方法和表单编码的请求体，
+            # 但这个端点不需要请求体参数
             response = self.client.post(
                 url,
                 headers={"Content-Type": "application/x-www-form-urlencoded"}
             )
             
-            # Parse the JSON response
+            # 解析 JSON 响应
             data = response.json()
             records = data.get('records', [])
             
-            self.logger.debug(f"Retrieved {len(records)} tasks from API")
+            self.logger.debug(f"从 API 获取了 {len(records)} 个任务")
             
-            # Get current time in milliseconds (Unix timestamp)
+            # 获取当前时间的毫秒数（Unix 时间戳）
             current_time_ms = int(time.time() * 1000)
             
-            # Iterate through tasks and find matching one
+            # 遍历任务列表并查找匹配的任务
             for task in records:
                 task_id = task.get('id')
                 task_name = task.get('name', '')
                 begin_time = task.get('beginTime', 0)
                 end_time = task.get('endTime', 0)
                 
-                # Check if task is currently active (within time window)
+                # 检查任务当前是否处于活动状态（在时间窗口内）
                 is_active = begin_time <= current_time_ms <= end_time
                 
-                # Check if task name contains the target keyword
+                # 检查任务名称是否包含目标关键词
                 is_target_type = "晚归" in task_name
                 
                 self.logger.debug(
-                    f"Task: {task_name} (ID: {task_id}), "
-                    f"active: {is_active}, target: {is_target_type}"
+                    f"任务: {task_name} (ID: {task_id}), "
+                    f"活跃: {is_active}, 目标: {is_target_type}"
                 )
                 
                 if is_active and is_target_type:
-                    # Found a matching task
+                    # 找到匹配的任务
                     self.logger.info(
                         f"[*] 精准匹配到进行中的晚归签到任务: 【{task_name}】 (ID: {task_id})"
                     )
                     return str(task_id)
                 elif is_active and not is_target_type:
-                    # Task is active but not the target type
+                    # 任务处于活动状态但不是目标类型
                     self.logger.info(
                         f"[!] 发现进行中的其他签到，跳过: 【{task_name}】"
                     )
             
-            # No matching task found
+            # 未找到匹配的任务
             self.logger.info("[-] 列表中没有正在有效时间内的晚归签到任务。")
             return None
             
         except Exception as e:
-            # Log the error and re-raise for caller to handle
+            # 记录错误并重新抛出供调用方处理
             self.logger.error(f"[!] 获取任务列表时发生异常: {e}")
             raise
     
     def get_task_details(self, task_id: int) -> Optional[TaskDetails]:
-        """Get task details including position information.
+        """获取包含位置信息的任务详情。
         
-        This method fetches task details from the API and extracts
-        the sign-in position information including coordinates and position ID.
+        本方法从 API 获取任务详情，并提取签到位置信息，
+        包括坐标和位置 ID。
         
-        Args:
-            task_id: The ID of the task to fetch details for
+        参数:
+            task_id: 要获取详情的任务 ID
             
-        Returns:
-            TaskDetails object if successful, None otherwise:
-            - Returns None if signInPositions is empty or None
-            - Returns None if API request fails
-            - Returns None if response parsing fails
+        返回:
+            如果成功则返回 TaskDetails 对象，否则返回 None：
+            - 如果 signInPositions 为空或 None 则返回 None
+            - 如果 API 请求失败则返回 None
+            - 如果响应解析失败则返回 None
         """
         url = f"/health-api/sign_in/{task_id}?fromPage=0"
         
         self.logger.info(f"[*] 请求任务详情 URL: {url}")
         
         try:
-            # Make the GET request to fetch task details
+            # 发起 GET 请求获取任务详情
             response = self.client.get(url)
             
-            # Parse the JSON response
+            # 解析 JSON 响应
             data = response.json()
             sign_in_positions = data.get('signInPositions', [])
             
-            # Boundary check: return None if signInPositions is empty or None
+            # 边界检查：如果 signInPositions 为空或 None 则返回 None
             if not sign_in_positions:
                 self.logger.warning(f"[!] 任务 {task_id} 没有签到位置信息")
                 return None
             
-            # Extract the first position
+            # 提取第一个位置
             position = sign_in_positions[0]
             
-            # Parse and convert fields
+            # 解析并转换字段
             position_id = position.get('id')
             lng_str = position.get('lng', '0')
             lat_str = position.get('lat', '0')
             position_name = position.get('positionName', '')
             
-            # Convert lng/lat to float with defensive programming
+            # 将经度/纬度转换为浮点数，使用防御式编程
             try:
                 base_lng = float(lng_str)
                 base_lat = float(lat_str)
@@ -203,6 +200,6 @@ class TaskService:
             )
             
         except Exception as e:
-            # Log the error and return None
+            # 记录错误并返回 None
             self.logger.error(f"[!] 获取任务详情时发生异常: {e}")
             return None

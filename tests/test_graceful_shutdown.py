@@ -1,4 +1,4 @@
-"""Tests for graceful shutdown handler."""
+"""优雅关闭处理器测试。"""
 
 import signal
 import threading
@@ -11,10 +11,10 @@ from fafu_auto_sign.graceful_shutdown import GracefulShutdown
 
 
 class TestGracefulShutdown:
-    """Test cases for GracefulShutdown class."""
+    """GracefulShutdown类测试用例。"""
     
     def test_init_creates_event_and_task_list(self):
-        """Test that __init__ creates necessary structures."""
+        """测试__init__创建必要的结构。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers') as mock_setup:
             gs = GracefulShutdown()
             assert gs._stop_event is not None
@@ -22,32 +22,32 @@ class TestGracefulShutdown:
             mock_setup.assert_called_once()
     
     def test_is_stopped_returns_false_initially(self):
-        """Test that is_stopped returns False before signal."""
+        """测试is_stopped在信号前返回False。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             assert gs.is_stopped() is False
     
     def test_is_stopped_returns_true_after_stop(self):
-        """Test that is_stopped returns True after stop() is called."""
+        """测试is_stopped在stop()调用后返回True。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             gs.stop()
             assert gs.is_stopped() is True
     
     def test_wait_returns_false_on_timeout(self):
-        """Test that wait returns False on timeout."""
+        """测试wait在超时时返回False。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
-            # Wait with short timeout should return False (not stopped)
+            # 短时间等待应该返回False（未停止）
             result = gs.wait(timeout=0.01)
             assert result is False
     
     def test_wait_returns_true_after_stop(self):
-        """Test that wait returns True after stop is set."""
+        """测试stop设置后wait返回True。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
-            # Set stop in another thread after a short delay
+            # 在另一个线程中短暂延迟后设置stop
             def delayed_stop():
                 time.sleep(0.05)
                 gs._stop_event.set()
@@ -55,14 +55,14 @@ class TestGracefulShutdown:
             thread = threading.Thread(target=delayed_stop)
             thread.start()
             
-            # Wait should return True when stop is set
+            # wait应该在stop设置时返回True
             result = gs.wait(timeout=1.0)
             
             thread.join()
             assert result is True
     
     def test_register_cleanup_adds_task(self):
-        """Test that register_cleanup adds tasks to the list."""
+        """测试register_cleanup将任务添加到列表。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -76,7 +76,7 @@ class TestGracefulShutdown:
             assert kwargs == {'key': 'value'}
     
     def test_cleanup_tasks_executed_in_reverse_order(self):
-        """Test that cleanup tasks run in LIFO order."""
+        """测试清理任务按后进先出顺序运行。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -97,11 +97,11 @@ class TestGracefulShutdown:
             
             gs.stop()
             
-            # Should execute in reverse order: 3, 2, 1
+            # 应该按相反顺序执行：3, 2, 1
             assert execution_order == [3, 2, 1]
     
     def test_cleanup_task_failure_does_not_stop_others(self):
-        """Test that one failing cleanup task doesn't stop others."""
+        """测试一个失败的清理任务不会停止其他任务。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -119,22 +119,22 @@ class TestGracefulShutdown:
             
             gs.stop()
             
-            # Both tasks should have been attempted
+            # 两个任务都应该已被尝试
             assert 'fail' in execution_order
             assert 'success' in execution_order
     
     def test_signal_handler_sets_stop_event(self):
-        """Test that signal handler sets stop event."""
+        """测试信号处理器设置stop事件。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
-            # Manually call signal handler (simulating signal)
+            # 手动调用信号处理器（模拟信号）
             gs._signal_handler(signal.SIGINT, None)
             
             assert gs.is_stopped() is True
     
     def test_signal_handler_runs_cleanup_tasks(self):
-        """Test that signal handler runs cleanup tasks."""
+        """测试信号处理器运行清理任务。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -149,17 +149,17 @@ class TestGracefulShutdown:
             assert len(cleanup_called) == 1
     
     def test_setup_signal_handlers_registers_sigint(self):
-        """Test that SIGINT handler is registered."""
+        """测试SIGINT处理器已注册。"""
         gs = GracefulShutdown()
         
-        # Get the current handler for SIGINT
+        # 获取SIGINT的当前处理器
         current_handler = signal.getsignal(signal.SIGINT)
         
-        # Should be our signal handler
+        # 应该是我们的信号处理器
         assert current_handler == gs._signal_handler
     
     def test_get_signal_name_valid_signal(self):
-        """Test getting signal name for valid signal."""
+        """测试获取有效信号的信号名称。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -167,7 +167,7 @@ class TestGracefulShutdown:
             assert name == 'SIGINT'
     
     def test_get_signal_name_invalid_signal(self):
-        """Test getting signal name for invalid signal."""
+        """测试获取无效信号的信号名称。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -175,17 +175,17 @@ class TestGracefulShutdown:
             assert 'Signal(999)' in name
     
     def test_context_manager_enters_and_exits(self):
-        """Test context manager properly enters and exits."""
+        """测试上下文管理器正确进入和退出。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             with GracefulShutdown() as gs:
                 assert isinstance(gs, GracefulShutdown)
                 assert not gs.is_stopped()
             
-            # After exit, should be stopped
+            # 退出后，应该已停止
             assert gs.is_stopped()
     
     def test_manual_stop_sets_event_and_runs_cleanup(self):
-        """Test manual stop method works correctly."""
+        """测试手动stop方法工作正常。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -201,7 +201,7 @@ class TestGracefulShutdown:
             assert len(cleanup_called) == 1
     
     def test_thread_safety_cleanup_registration(self):
-        """Test that cleanup registration is thread-safe."""
+        """测试清理注册是线程安全的。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -224,7 +224,7 @@ class TestGracefulShutdown:
             assert len(gs._cleanup_tasks) == 500
     
     def test_wait_is_interruptible(self):
-        """Test that wait can be interrupted by stop."""
+        """测试wait可以被stop中断。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -236,25 +236,25 @@ class TestGracefulShutdown:
             thread = threading.Thread(target=wait_thread)
             thread.start()
             
-            # Give thread time to start waiting
+            # 让线程有时间开始等待
             time.sleep(0.05)
             
-            # Stop should interrupt the wait
+            # stop应该中断wait
             start_time = time.time()
             gs.stop()
             thread.join(timeout=1.0)
             elapsed = time.time() - start_time
             
-            # Should have completed quickly, not waited 10 seconds
+            # 应该很快完成，而不是等待10秒
             assert elapsed < 1.0
             assert wait_result[0] is True
 
 
 class TestGracefulShutdownIntegration:
-    """Integration tests for GracefulShutdown."""
+    """GracefulShutdown集成测试。"""
     
     def test_full_lifecycle(self):
-        """Test complete lifecycle of graceful shutdown."""
+        """测试优雅关闭的完整生命周期。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -267,26 +267,26 @@ class TestGracefulShutdownIntegration:
             def close_resource2():
                 resource2_closed.append(True)
             
-            # Register cleanup tasks
+            # 注册清理任务
             gs.register_cleanup(close_resource1)
             gs.register_cleanup(close_resource2)
             
-            # Simulate main loop
+            # 模拟主循环
             iterations = 0
             while not gs.is_stopped() and iterations < 3:
                 iterations += 1
                 time.sleep(0.01)
             
-            # Trigger shutdown
+            # 触发关闭
             gs.stop()
             
-            # Verify state
+            # 验证状态
             assert gs.is_stopped()
             assert len(resource1_closed) == 1
             assert len(resource2_closed) == 1
     
     def test_simulated_signal_flow(self):
-        """Test simulating the full signal handling flow."""
+        """测试模拟完整的信号处理流程。"""
         with patch.object(GracefulShutdown, '_setup_signal_handlers'):
             gs = GracefulShutdown()
             
@@ -305,10 +305,10 @@ class TestGracefulShutdownIntegration:
             gs.register_cleanup(cleanup_b)
             gs.register_cleanup(cleanup_c)
             
-            # Simulate receiving SIGINT
+            # 模拟接收SIGINT
             gs._signal_handler(signal.SIGINT, None)
             
-            # Verify shutdown occurred
+            # 验证关闭已发生
             assert gs.is_stopped()
-            # Cleanup should run in reverse order: C, B, A
+            # 清理应该按相反顺序运行：C, B, A
             assert cleanup_order == ['C', 'B', 'A']

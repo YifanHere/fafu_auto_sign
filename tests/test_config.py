@@ -1,4 +1,4 @@
-"""Tests for configuration module."""
+"""配置模块测试。"""
 
 import json
 import os
@@ -16,10 +16,10 @@ from fafu_auto_sign.config import AppConfig, load_config
 
 
 class TestAppConfig:
-    """Tests for AppConfig validation."""
+    """AppConfig验证测试。"""
     
     def test_valid_config(self):
-        """Test valid configuration is accepted."""
+        """测试有效配置被接受。"""
         config = AppConfig(
             user_token="2_TEST_TOKEN_HERE"
         )
@@ -31,23 +31,23 @@ class TestAppConfig:
         assert config.log_level == "INFO"  # Default
     
     def test_token_not_starting_with_2_(self):
-        """Test token not starting with '2_' is rejected."""
+        """测试不以 '2_' 开头的令牌被拒绝。"""
         with pytest.raises(ValidationError) as exc_info:
             AppConfig(
                 user_token="INVALID_TOKEN"
             )
-        assert "User token must start with '2_'" in str(exc_info.value)
+        assert "用户令牌必须以 '2_' 开头" in str(exc_info.value)
     
     def test_empty_token(self):
-        """Test empty token is rejected."""
+        """Test empty token 开头的令牌被拒绝。"""
         with pytest.raises(ValidationError) as exc_info:
             AppConfig(
                 user_token=""
             )
-        assert "User token must start with '2_'" in str(exc_info.value)
+        assert "用户令牌必须以 '2_' 开头" in str(exc_info.value)
     
     def test_custom_values(self):
-        """Test custom configuration values."""
+        """测试自定义配置值。"""
         config = AppConfig(
             user_token="2_CUSTOM_TOKEN",
             jitter=0.0001,
@@ -63,39 +63,39 @@ class TestAppConfig:
         assert config.log_level == "DEBUG"
     
     def test_invalid_log_level(self):
-        """Test invalid log level is rejected."""
+        """Test invalid log level 开头的令牌被拒绝。"""
         with pytest.raises(ValidationError) as exc_info:
             AppConfig(
                 user_token="2_TEST_TOKEN",
                 log_level="INVALID"
             )
-        assert "Log level must be one of" in str(exc_info.value)
+        assert "日志级别必须是" in str(exc_info.value)
 
     def test_jitter_validation(self):
-        """Test jitter validation."""
-        # Valid jitter values
+        """测试抖动验证。"""
+        # 有效的抖动值
         config = AppConfig(user_token="2_TEST", jitter=0)
         assert config.jitter == 0
         
         config = AppConfig(user_token="2_TEST", jitter=0.001)
         assert config.jitter == 0.001
         
-        # Invalid jitter - too high
+        # 无效的抖动 - 过高
         with pytest.raises(ValidationError) as exc_info:
             AppConfig(user_token="2_TEST", jitter=0.002)
-        assert "Jitter must be between 0 and 0.001" in str(exc_info.value)
+        assert "抖动量必须在 0 到 0.001 之间" in str(exc_info.value)
         
-        # Invalid jitter - negative
+        # 无效的抖动 - 负数
         with pytest.raises(ValidationError) as exc_info:
             AppConfig(user_token="2_TEST", jitter=-0.0001)
-        assert "Jitter must be between 0 and 0.001" in str(exc_info.value)
+        assert "抖动量必须在 0 到 0.001 之间" in str(exc_info.value)
 
 
 class TestLoadConfig:
-    """Tests for load_config function."""
+    """load_config函数测试。"""
     
     def test_load_from_json_file(self, tmp_path: Path):
-        """Test loading configuration from JSON file."""
+        """测试从JSON文件加载配置。"""
         config_data = {
             "user_token": "2_JSON_TOKEN",
             "jitter": 0.00003,
@@ -113,12 +113,12 @@ class TestLoadConfig:
         assert config.image_path == "test.jpg"
     
     def test_load_from_nonexistent_file(self, tmp_path: Path):
-        """Test loading from nonexistent file raises FileNotFoundError."""
+        """测试从不存在文件加载时引发FileNotFoundError。"""
         with pytest.raises(FileNotFoundError):
             load_config(tmp_path / "nonexistent.json")
     
     def test_load_from_env_vars(self, monkeypatch: pytest.MonkeyPatch):
-        """Test loading configuration from environment variables."""
+        """测试从环境变量加载配置。"""
         monkeypatch.setenv("FAFU_USER_TOKEN", "2_ENV_TOKEN")
         monkeypatch.setenv("FAFU_JITTER", "0.0001")
         monkeypatch.setenv("FAFU_IMAGE_PATH", "env.jpg")
@@ -130,7 +130,7 @@ class TestLoadConfig:
         assert config.image_path == "env.jpg"
     
     def test_env_vars_override_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-        """Test environment variables override JSON file values."""
+        """测试环境变量覆盖JSON文件值。"""
         config_data = {
             "user_token": "2_JSON_TOKEN",
             "jitter": 0.00005
@@ -145,13 +145,13 @@ class TestLoadConfig:
         
         config = load_config(config_file)
         
-        # Environment variables should override JSON values
+        # 环境变量应该覆盖JSON值
         assert config.user_token == "2_OVERRIDE_TOKEN"
         assert config.jitter == 0.0001
     
     def test_backward_compatibility_with_old_config(self, tmp_path: Path):
-        """Test backward compatibility with old config containing location field."""
-        # Old config format with location field
+        """测试包含location字段的旧配置的向后兼容性。"""
+        # 带location字段的旧配置格式
         config_data = {
             "user_token": "2_OLD_TOKEN",
             "location": {
@@ -166,14 +166,14 @@ class TestLoadConfig:
         with open(config_file, "w") as f:
             json.dump(config_data, f)
         
-        # Should load successfully, ignoring extra fields
+        # 应该成功加载，忽略额外字段
         config = load_config(config_file)
         
         assert config.user_token == "2_OLD_TOKEN"
         assert config.jitter == 0.00005  # Uses default, not from old location
     
     def test_partial_config_with_defaults(self, tmp_path: Path):
-        """Test partial config uses defaults for missing values."""
+        """测试部分配置对缺失值使用默认值。"""
         config_data = {
             "user_token": "2_PARTIAL_TOKEN"
         }
@@ -185,7 +185,7 @@ class TestLoadConfig:
         config = load_config(config_file)
         
         assert config.user_token == "2_PARTIAL_TOKEN"
-        # Check defaults are used
+        # 检查是否使用默认值
         assert config.jitter == 0.00005
         assert config.image_path == "dorm.jpg"
         assert config.heartbeat_interval == 900
@@ -193,20 +193,20 @@ class TestLoadConfig:
 
 
 class TestEdgeCases:
-    """Tests for edge cases and boundary conditions."""
+    """边界条件和边界情况测试。"""
     
     def test_boundary_jitter_min(self):
-        """Test minimum boundary jitter value."""
+        """测试最小边界抖动值。"""
         config = AppConfig(user_token="2_TEST", jitter=0)
         assert config.jitter == 0
     
     def test_boundary_jitter_max(self):
-        """Test maximum boundary jitter value."""
+        """测试最大边界抖动值。"""
         config = AppConfig(user_token="2_TEST", jitter=0.001)
         assert config.jitter == 0.001
     
     def test_token_with_special_characters(self):
-        """Test token with various characters starting with 2_."""
+        """测试以2_开头、包含各种字符的令牌。"""
         token = "2_ABC123_xyz-789.TEST"
         config = AppConfig(user_token=token)
         assert config.user_token == token

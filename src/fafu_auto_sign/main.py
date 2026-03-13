@@ -1,9 +1,8 @@
-"""Main entry point for FAFU Auto Sign application.
+"""FAFU Auto Sign 应用程序的主入口点。
 
-This module provides the main entry point for the automatic sign-in daemon,
-integrating all modules: config, logging, client, services, and graceful shutdown.
+本模块为自动签到守护进程提供主入口点，
+集成所有模块：配置、日志、客户端、服务和优雅退出。
 """
-
 import logging
 
 from requests.exceptions import ConnectionError, RequestException
@@ -17,19 +16,19 @@ from fafu_auto_sign.graceful_shutdown import GracefulShutdown
 
 
 def run(config_path: str = "config.json") -> None:
-    """Run the automatic sign-in daemon.
+    """运行自动签到守护进程。
     
-    This function initializes all components and runs the main loop that:
-    1. Fetches pending tasks
-    2. Uploads sign-in images
-    3. Submits sign-in requests
-    4. Waits for the next heartbeat interval
+    本函数初始化所有组件并运行主循环，执行以下操作：
+    1. 获取待处理任务
+    2. 上传签到图片
+    3. 提交签到请求
+    4. 等待下一个心跳间隔
     
-    The daemon can be gracefully stopped via SIGINT (Ctrl+C) or SIGTERM.
-    Network errors are handled gracefully without crashing the daemon.
+    守护进程可通过 SIGINT (Ctrl+C) 或 SIGTERM 优雅停止。
+    网络错误会被优雅处理，不会导致守护进程崩溃。
     
-    Args:
-        config_path: Path to the JSON configuration file.
+    参数:
+        config_path: JSON 配置文件的路径。
     """
     # 1. 加载配置
     config = load_config(config_path)

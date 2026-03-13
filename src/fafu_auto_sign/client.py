@@ -1,9 +1,8 @@
-"""HTTP client module for FAFU Auto Sign.
+"""FAFU 自动签到的 HTTP 客户端模块。
 
-This module provides a custom HTTP client with retry logic,
-session management, and proper error handling.
+本模块提供自定义 HTTP 客户端，支持重试逻辑、
+会话管理和适当的错误处理。
 """
-
 import logging
 import sys
 import time
@@ -18,82 +17,82 @@ from fafu_auto_sign.crypto import generate_headers
 
 
 class FAFUClient:
-    """HTTP client with retry logic and session management.
+    """支持重试逻辑和会话管理的 HTTP 客户端。
     
-    Features:
-    - Application-level retry with exponential backoff
-    - Dynamic Authorization header generation on each retry
-    - Special handling for 401 (token expired) and 408 (time sync error)
-    - Context manager support
-    - Configurable timeouts
+    特性:
+    - 应用级别的指数退避重试
+    - 每次重试时动态生成授权头
+    - 特殊处理 401（令牌过期）和 408（时间同步错误）
+    - 支持上下文管理器
+    - 可配置超时时间
     """
     
-    # Retry configuration
+    # 重试配置
     MAX_RETRIES = 3
-    RETRY_DELAY_BASE = 1  # Base delay in seconds (1, 2, 4...)
+    RETRY_DELAY_BASE = 1  # 基础延迟秒数（1, 2, 4...）
     RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
     
-    # Timeout configuration (connect, read)
+    # 超时配置（连接，读取）
     TIMEOUT = (10, 30)
     
     def __init__(self, config: AppConfig):
-        """Initialize the HTTP client.
+        """初始化 HTTP 客户端。
         
-        Args:
-            config: Application configuration containing base_url and user_token.
+        参数:
+            config: 包含 base_url 和 user_token 的应用程序配置。
         """
         self.config = config
         self.session = requests.Session()
         self.logger = logging.getLogger(self.__class__.__name__)
     
     def request(self, method: str, url: str, **kwargs: Any) -> Response:
-        """Make an HTTP request with retry logic.
+        """发起带重试逻辑的 HTTP 请求。
         
-        This method implements application-level retry with exponential backoff.
-        On each retry, a new Authorization header is generated with a fresh timestamp.
+        本方法实现应用级别的指数退避重试。
+        每次重试时，使用新的时间戳生成新的授权头。
         
-        Special status codes:
-        - 401: Token expired - terminates the program
-        - 408: Time sync error - terminates the program
+        特殊状态码:
+        - 401: 令牌过期 - 终止程序
+        - 408: 时间同步错误 - 终止程序
         
-        Args:
-            method: HTTP method (GET, POST, etc.)
-            url: Request URL (relative or absolute)
-            **kwargs: Additional arguments passed to requests
+        参数:
+            method: HTTP 方法（GET, POST 等）
+            url: 请求 URL（相对或绝对）
+            **kwargs: 传递给 requests 的额外参数
         
-        Returns:
-            Response object from the successful request.
+        返回:
+            成功请求的响应对象。
             
-        Raises:
-            RequestException: If all retries are exhausted.
-            SystemExit: If 401 or 408 status code is received.
+        抛出:
+            RequestException: 如果所有重试都耗尽。
+            SystemExit: 如果收到 401 或 408 状态码。
         """
-        # Ensure URL is absolute
+        # 确保 URL 是绝对路径
         if not url.startswith("http"):
             full_url = f"{self.config.base_url.rstrip('/')}/{url.lstrip('/')}"
         else:
             full_url = url
         
-        # Merge timeout if not provided
+        # 如果未提供则合并超时设置
         if "timeout" not in kwargs:
             kwargs["timeout"] = self.TIMEOUT
         
         last_exception: RequestException | None = None
         
         for attempt in range(self.MAX_RETRIES):
-            # Generate fresh headers on each attempt (important for retry!)
+            # 每次尝试生成新的请求头（对重试很重要！）
             headers = generate_headers(full_url, self.config.user_token)
             
-            # Allow custom headers to override generated ones
+            # 允许自定义请求头覆盖生成的请求头
             if "headers" in kwargs:
                 custom_headers = kwargs.pop("headers")
                 headers.update(custom_headers)
             
             try:
-                self.logger.debug(f"Request {attempt + 1}/{self.MAX_RETRIES}: {method} {full_url}")
+                self.logger.debug(f"请求 {attempt + 1}/{self.MAX_RETRIES}: {method} {full_url}")
                 response = self.session.request(method, full_url, headers=headers, **kwargs)
                 
-                # Handle special status codes that terminate the program
+                # 处理会终止程序的特殊状态码
                 if response.status_code == 401:
                     self.logger.error("Token 已过期，请重新抓包获取并更新配置文件！")
                     sys.exit(1)
@@ -102,71 +101,71 @@ class FAFUClient:
                     self.logger.error("运行脚本的系统时间与标准北京时间不一致，签名校验失败，请校准系统时间！")
                     sys.exit(1)
                 
-                # Check if we should retry based on status code
+                # 根据状态码检查是否应该重试
                 if response.status_code in self.RETRY_STATUS_CODES:
                     if attempt < self.MAX_RETRIES - 1:
                         delay = self.RETRY_DELAY_BASE * (2 ** attempt)
                         self.logger.warning(
-                            f"Received status {response.status_code}, "
-                            f"retrying in {delay}s... (attempt {attempt + 1}/{self.MAX_RETRIES})"
+                            f"收到状态码 {response.status_code}, "
+                            f"{delay}秒后重试... (尝试 {attempt + 1}/{self.MAX_RETRIES})"
                         )
                         time.sleep(delay)
                         continue
                 
-                # Raise for other HTTP errors (4xx, 5xx not in retry list)
+                # 对其他 HTTP 错误抛出异常（4xx, 5xx 不在重试列表中）
                 response.raise_for_status()
                 
-                self.logger.debug(f"Request successful: {response.status_code}")
+                self.logger.debug(f"请求成功: {response.status_code}")
                 return response
                 
             except RequestException as e:
                 last_exception = e
                 
-                # Check if it's a connection error or timeout that we should retry
+                # 检查是否应该重试连接错误或超时
                 should_retry = False
                 if isinstance(e, requests.exceptions.Timeout):
                     should_retry = True
-                    self.logger.warning(f"Request timeout on attempt {attempt + 1}")
+                    self.logger.warning(f"请求 {attempt + 1} 超时")
                 elif isinstance(e, requests.exceptions.ConnectionError):
                     should_retry = True
-                    self.logger.warning(f"Connection error on attempt {attempt + 1}")
+                    self.logger.warning(f"请求 {attempt + 1} 连接错误")
                 elif hasattr(e, 'response') and e.response is not None:
-                    # Already handled above, but just in case
+                    # 上面已经处理过，但以防万一
                     if e.response.status_code in self.RETRY_STATUS_CODES:
                         should_retry = True
                 
                 if should_retry and attempt < self.MAX_RETRIES - 1:
                     delay = self.RETRY_DELAY_BASE * (2 ** attempt)
-                    self.logger.warning(f"Retrying in {delay}s...")
+                    self.logger.warning(f"{delay}秒后重试...")
                     time.sleep(delay)
                 else:
-                    # Don't retry, re-raise the exception
+                    # 不重试，重新抛出异常
                     raise
         
-        # All retries exhausted
+        # 所有重试已耗尽
         if last_exception:
             raise last_exception
         
-        # This should never happen, but just in case
-        raise RequestException(f"Failed after {self.MAX_RETRIES} attempts")
+        # 这不应该发生，但以防万一
+        raise RequestException(f"{self.MAX_RETRIES} 次尝试后失败")
     
     def get(self, url: str, **kwargs: Any) -> Response:
-        """Make a GET request."""
+        """发起 GET 请求。"""
         return self.request("GET", url, **kwargs)
     
     def post(self, url: str, **kwargs: Any) -> Response:
-        """Make a POST request."""
+        """发起 POST 请求。"""
         return self.request("POST", url, **kwargs)
     
     def close(self) -> None:
-        """Close the session and release resources."""
+        """关闭会话并释放资源。"""
         self.session.close()
-        self.logger.debug("Session closed")
+        self.logger.debug("会话已关闭")
     
     def __enter__(self) -> "FAFUClient":
-        """Enter context manager."""
+        """进入上下文管理器。"""
         return self
     
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exit context manager and close session."""
+        """退出上下文管理器并关闭会话。"""
         self.close()

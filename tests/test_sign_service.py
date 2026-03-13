@@ -1,9 +1,9 @@
-"""Tests for the sign-in service.
+"""签到服务测试。
 
-This module tests the SignService class, including:
-- Successful and failed sign-in submissions
-- GPS jitter calculation and range validation
-- Correct parameter passing (URL query params)
+本模块测试SignService类，包括：
+- 成功和失败的签到提交
+- GPS抖动计算和范围验证
+- 正确的参数传递（URL查询参数）
 """
 
 import sys
@@ -22,7 +22,7 @@ from fafu_auto_sign.services.sign_service import SignService
 
 @pytest.fixture
 def mock_config():
-    """Create a mock configuration for testing."""
+    """为测试创建mock配置。"""
     config = MagicMock(spec=AppConfig)
     config.jitter = 0.00005
     return config
@@ -30,97 +30,97 @@ def mock_config():
 
 @pytest.fixture
 def mock_client():
-    """Create a mock HTTP client for testing."""
+    """为测试创建mock HTTP客户端。"""
     client = MagicMock(spec=FAFUClient)
     return client
 
 
 @pytest.fixture
 def sign_service(mock_client, mock_config):
-    """Create a SignService instance with mocked dependencies."""
+    """使用mock依赖创建SignService实例。"""
     return SignService(mock_client, mock_config)
 
 
 class TestSubmitSign:
-    """Tests for the submit_sign method."""
+    """submit_sign方法测试。"""
     
     def test_submit_sign_success_returns_true(self, sign_service, mock_client):
-        """Test that successful sign-in returns True."""
-        # Arrange
+        """测试成功签到返回True。"""
+        # 准备
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = '{"code": 200, "message": "success"}'
         mock_client.post.return_value = mock_response
         
-        # Act
+        # 执行
         result = sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
-        # Assert
+        # 验证
         assert result is True
     
     def test_submit_sign_failure_returns_false(self, sign_service, mock_client):
-        """Test that failed sign-in returns False."""
-        # Arrange
+        """测试失败签到返回False。"""
+        # 准备
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_response.text = '{"code": 400, "message": "bad request"}'
         mock_client.post.return_value = mock_response
         
-        # Act
+        # 执行
         result = sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
-        # Assert
+        # 验证
         assert result is False
     
     def test_submit_sign_uses_url_query_params(self, sign_service, mock_client):
-        """Test that parameters are passed as URL query params, not JSON body."""
-        # Arrange
+        """测试参数作为URL查询参数传递，而非JSON body。"""
+        # 准备
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_client.post.return_value = mock_response
         
-        # Act
+        # 执行
         sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
-        # Assert
+        # 验证
         call_args = mock_client.post.call_args
         
-        # Check URL
+        # 检查URL
         assert call_args[0][0] == "/health-api/sign_in/123/student/sign"
         
-        # Check that params kwarg was used (URL query params)
+        # 检查使用了params kwargs（URL查询参数）
         assert "params" in call_args.kwargs
         params = call_args.kwargs["params"]
         
-        # Verify required parameters are present
+        # 验证必需参数存在
         assert "lng" in params
         assert "lat" in params
         assert params["signImg"] == "http://example.com/image.jpg"
         assert params["signInPositionId"] == 516208
     
     def test_submit_sign_formats_coordinates_to_6_decimal_places(self, sign_service, mock_client):
-        """Test that coordinates are formatted to 6 decimal places."""
-        # Arrange
+        """测试坐标格式化为6位小数。"""
+        # 准备
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_client.post.return_value = mock_response
         
-        # Act
+        # 执行
         sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
-        # Assert
+        # 验证
         call_args = mock_client.post.call_args
         params = call_args.kwargs["params"]
         
-        # Check that lng and lat are formatted to 6 decimal places
+        # 检查lng和lat格式化为6位小数
         lng_value = params["lng"]
         lat_value = params["lat"]
         
-        # They should be strings with 6 decimal places
+        # 它们应该是带6位小数的字符串
         assert isinstance(lng_value, str)
         assert isinstance(lat_value, str)
         
-        # Verify decimal places (split by dot and check fractional part)
+        # 验证小数位数（用小数点分割并检查小数部分）
         lng_decimals = lng_value.split(".")[1] if "." in lng_value else ""
         lat_decimals = lat_value.split(".")[1] if "." in lat_value else ""
         
@@ -129,11 +129,11 @@ class TestSubmitSign:
 
 
 class TestGPSJitter:
-    """Tests for GPS coordinate jitter functionality."""
+    """GPS坐标抖动功能测试。"""
     
     def test_gps_jitter_within_range(self, sign_service, mock_client):
-        """Test that GPS jitter is within ±0.00005 degrees."""
-        # Arrange
+        """测试GPS抖动在±0.00005度范围内。"""
+        # 准备
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_client.post.return_value = mock_response
@@ -142,7 +142,7 @@ class TestGPSJitter:
         base_lat = 25.077727
         jitter = 0.00005
         
-        # Act - Run multiple times to test randomness
+        # 执行 - Run multiple times to test randomness
         for _ in range(100):
             mock_client.reset_mock()
             sign_service.submit_sign(123, 516208, base_lng, base_lat, "http://example.com/image.jpg")
@@ -153,7 +153,7 @@ class TestGPSJitter:
             actual_lng = float(params["lng"])
             actual_lat = float(params["lat"])
             
-            # Assert - Check jitter is within expected range
+            # 验证 - Check jitter is within expected range
             lng_diff = abs(actual_lng - base_lng)
             lat_diff = abs(actual_lat - base_lat)
             
@@ -161,15 +161,15 @@ class TestGPSJitter:
             assert lat_diff <= jitter * 1.01, f"Latitude jitter {lat_diff} exceeds max {jitter}"
     
     def test_gps_jitter_is_randomized(self, sign_service, mock_client):
-        """Test that GPS coordinates are randomized (not always the same)."""
-        # Arrange
+        """测试GPS坐标是随机的（不总是相同）。"""
+        # 准备
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_client.post.return_value = mock_response
         
         coordinates = []
         
-        # Act - Collect multiple coordinate pairs
+        # 执行 - Collect multiple coordinate pairs
         for _ in range(10):
             mock_client.reset_mock()
             sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
@@ -179,45 +179,45 @@ class TestGPSJitter:
             
             coordinates.append((float(params["lng"]), float(params["lat"])))
         
-        # Assert - Check that not all coordinates are identical
+        # 验证 - Check that not all coordinates are identical
         unique_coordinates = set(coordinates)
         assert len(unique_coordinates) > 1, "GPS coordinates should be randomized"
     
     def test_calculate_jittered_coordinates_returns_tuple(self, sign_service):
-        """Test the helper method returns correct tuple format."""
+        """测试辅助方法返回正确的元组格式。"""
         base_lng = 118.237686
         base_lat = 25.077727
         jitter = 0.00005
         
-        # Act
+        # 执行
         lng, lat = sign_service._calculate_jittered_coordinates(base_lng, base_lat)
         
-        # Assert
+        # 验证
         assert isinstance(lng, float)
         assert isinstance(lat, float)
         
-        # Check jitter range
+        # 检查抖动范围
         assert abs(lng - base_lng) <= jitter
         assert abs(lat - base_lat) <= jitter
 
 
 class TestErrorHandling:
-    """Tests for error handling scenarios."""
+    """错误处理场景测试。"""
     
     def test_submit_sign_handles_exception_returns_false(self, sign_service, mock_client):
-        """Test that exceptions are handled and return False."""
-        # Arrange
+        """测试异常被捕获并返回False。"""
+        # 准备
         mock_client.post.side_effect = Exception("Network error")
         
-        # Act
+        # 执行
         result = sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
-        # Assert
+        # 验证
         assert result is False
     
     def test_submit_sign_logs_success_message(self, sign_service, mock_client, caplog):
-        """Test that success message is logged."""
-        # Arrange
+        """测试成功消息被记录。"""
+        # 准备
         import logging
         caplog.set_level(logging.INFO)
         
@@ -225,15 +225,15 @@ class TestErrorHandling:
         mock_response.status_code = 200
         mock_client.post.return_value = mock_response
         
-        # Act
+        # 执行
         sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
-        # Assert
+        # 验证
         assert "✅ 签到成功" in caplog.text
     
     def test_submit_sign_logs_failure_message(self, sign_service, mock_client, caplog):
-        """Test that failure message is logged."""
-        # Arrange
+        """测试失败消息被记录。"""
+        # 准备
         import logging
         caplog.set_level(logging.ERROR)
         
@@ -242,9 +242,9 @@ class TestErrorHandling:
         mock_response.text = "Internal Server Error"
         mock_client.post.return_value = mock_response
         
-        # Act
+        # 执行
         sign_service.submit_sign(123, 516208, 118.237686, 25.077727, "http://example.com/image.jpg")
         
-        # Assert
+        # 验证
         assert "❌ 签到失败" in caplog.text
         assert "500" in caplog.text

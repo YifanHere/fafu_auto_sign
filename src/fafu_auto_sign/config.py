@@ -1,9 +1,8 @@
-"""Configuration module for FAFU Auto Sign.
+"""FAFU 自动签到的配置模块。
 
-This module provides Pydantic-based configuration management with support for
-JSON files, environment variables, and .env files.
+本模块提供基于 Pydantic 的配置管理，支持
+JSON 文件、环境变量和 .env 文件。
 """
-
 import json
 import os
 from pathlib import Path
@@ -14,13 +13,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppConfig(BaseSettings):
-    """Application configuration with validation.
+    """应用程序配置（带验证）。
     
-    Configuration priority (highest to lowest):
-    1. Environment variables (FAFU_*)
-    2. .env file
-    3. JSON config file
-    4. Default values
+    配置优先级（从高到低）：
+    1. 环境变量 (FAFU_*)
+    2. .env 文件
+    3. JSON 配置文件
+    4. 默认值
     """
     
     model_config = SettingsConfigDict(
@@ -30,77 +29,78 @@ class AppConfig(BaseSettings):
         case_sensitive=False,
     )
     
-    # Required fields
-    user_token: str = Field(..., description="User token (must start with '2_')")
+    # 必填字段
+    user_token: str = Field(..., description="用户令牌（必须以 '2_' 开头）")
     
-    # Optional fields with defaults
-    jitter: float = Field(default=0.00005, description="Maximum jitter amount for location (0 to 0.001)")
-    image_path: str = Field(default="dorm.jpg", description="Path to dormitory image")
-    base_url: str = Field(default="http://stuhtapi.fafu.edu.cn", description="API base URL")
-    heartbeat_interval: int = Field(default=900, description="Heartbeat interval in seconds")
-    log_level: str = Field(default="INFO", description="Logging level")
+    # 可选字段（带默认值）
+    jitter: float = Field(default=0.00005, description="位置最大抖动量（0 到 0.001）")
+    image_path: str = Field(default="dorm.jpg", description="宿舍照片路径")
+    base_url: str = Field(default="http://stuhtapi.fafu.edu.cn", description="API 基础 URL")
+    heartbeat_interval: int = Field(default=900, description="心跳间隔（秒）")
+    log_level: str = Field(default="INFO", description="日志级别")
     
     @field_validator("user_token")
     @classmethod
     def validate_token_format(cls, v: str) -> str:
-        """Validate user token starts with '2_'."""
+        """验证用户令牌以 '2_' 开头。"""
         if not v.startswith("2_"):
-            raise ValueError(f"User token must start with '2_', got: {v[:20]}...")
+            raise ValueError(f"用户令牌必须以 '2_' 开头，当前值: {v[:20]}...")
         return v
+    
     @field_validator("jitter")
     @classmethod
     def validate_jitter(cls, v: float) -> float:
-        """Validate jitter is within valid range."""
+        """验证抖动量在有效范围内。"""
         if not 0 <= v <= 0.001:
-            raise ValueError(f"Jitter must be between 0 and 0.001, got {v}")
+            raise ValueError(f"抖动量必须在 0 到 0.001 之间，当前值: {v}")
         return v
     
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
-        """Validate log level is valid."""
+        """验证日志级别是否有效。"""
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in valid_levels:
-            raise ValueError(f"Log level must be one of {valid_levels}, got {v}")
+            raise ValueError(f"日志级别必须是 {valid_levels} 之一，当前值: {v}")
         return v.upper()
 
 
 
 def load_config(config_path: str | Path | None = None) -> AppConfig:
-    """Load configuration from file and environment.
+    """从文件和环境加载配置。
     
-    Args:
-        config_path: Path to JSON config file. If None, only environment variables
-                     and .env file are used.
+    参数:
+        config_path: JSON 配置文件路径。如果为 None，则只使用环境变量
+                     和 .env 文件。
     
-    Returns:
-        AppConfig: Validated configuration object.
+    返回:
+        AppConfig: 已验证的配置对象。
     
-    Raises:
-        FileNotFoundError: If config file is specified but doesn't exist.
-        ValueError: If configuration validation fails.
+    抛出:
+        FileNotFoundError: 如果指定了配置文件但不存在。
+        ValueError: 如果配置验证失败。
     
-    Example:
+    示例:
         >>> config = load_config("config.json")
-        >>> config = load_config()  # Use env vars and .env only
+        >>> config = load_config()  # 仅使用环境变量和 .env 文件
     """
     config_dict: dict[str, Any] = {}
     
-    # Load from JSON file if provided
+    # 如果提供了 JSON 文件则从文件加载
     if config_path is not None:
         path = Path(config_path)
         if not path.exists():
-            raise FileNotFoundError(f"Config file not found: {config_path}")
+            raise FileNotFoundError(f"配置文件不存在: {config_path}")
         
         with open(path, "r", encoding="utf-8") as f:
             config_dict = json.load(f)
     
-    # Environment variables take precedence over JSON file values
-    # Check for environment variables and override JSON values
+    # 环境变量优先级高于 JSON 文件值
+    # 检查环境变量并覆盖 JSON 值
     if os.environ.get("FAFU_USER_TOKEN"):
         config_dict["user_token"] = os.environ.get("FAFU_USER_TOKEN")
     
-    # Handle other top-level environment variables
+    # 处理其他顶层环境变量
     if os.environ.get("FAFU_JITTER"):
         config_dict["jitter"] = float(os.environ.get("FAFU_JITTER"))
     if os.environ.get("FAFU_IMAGE_PATH"):
@@ -111,14 +111,16 @@ def load_config(config_path: str | Path | None = None) -> AppConfig:
         config_dict["heartbeat_interval"] = int(os.environ.get("FAFU_HEARTBEAT_INTERVAL"))
     if os.environ.get("FAFU_LOG_LEVEL"):
         config_dict["log_level"] = os.environ.get("FAFU_LOG_LEVEL")
+    
     return AppConfig(**config_dict)
 
 
+
 def create_example_config(path: str | Path = "config.json.example") -> None:
-    """Create an example configuration file.
+    """创建示例配置文件。
     
-    Args:
-        path: Path where to create the example config file.
+    参数:
+        path: 创建示例配置文件的路径。
     """
     example_config = {
         "user_token": "2_YOUR_TOKEN_HERE",
@@ -133,7 +135,8 @@ def create_example_config(path: str | Path = "config.json.example") -> None:
         json.dump(example_config, f, indent=2, ensure_ascii=False)
 
 
+
 if __name__ == "__main__":
-    # Create example config for reference
+    # 创建示例配置供参考
     create_example_config()
-    print("Example config created at config.json.example")
+    print("示例配置已创建于 config.json.example")

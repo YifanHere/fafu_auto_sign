@@ -1,8 +1,8 @@
-"""Tests for task service module.
+"""任务服务模块测试。
 
-This module contains tests for the TaskService class,
-verifying task identification, time window filtering,
-and keyword matching logic.
+本模块包含TaskService类的测试，
+验证任务识别、时间窗口过滤
+和关键词匹配逻辑。
 """
 
 import sys
@@ -22,7 +22,7 @@ from fafu_auto_sign.services.task_service import TaskService, TaskDetails
 
 @pytest.fixture
 def mock_config():
-    """Create a mock AppConfig for testing."""
+    """为测试创建mock AppConfig。"""
     return AppConfig(
         user_token="2_TEST_TOKEN",
         jitter=0.00005,
@@ -32,32 +32,32 @@ def mock_config():
 
 @pytest.fixture
 def mock_client(mock_config):
-    """Create a mock FAFUClient for testing."""
+    """为测试创建mock FAFUClient。"""
     return FAFUClient(mock_config)
 
 
 @pytest.fixture
 def task_service(mock_client):
-    """Create a TaskService instance for testing."""
+    """为测试创建TaskService实例。"""
     return TaskService(mock_client)
 
 
 @pytest.fixture
 def sample_tasks():
-    """Sample task list data for testing task identification logic."""
+    """用于测试任务识别逻辑的示例任务列表数据。"""
     return {
         "records": [
             {
                 "id": 1001,
                 "name": "晚归签到任务 - A10号楼",
-                "beginTime": 1234567800000,  # 100 seconds before frozen time
-                "endTime": 1234567980000,    # 90 seconds after frozen time
+                "beginTime": 1234567800000,  # 冻结时间前100秒
+                "endTime": 1234567980000,    # 冻结时间后90秒
             },
             {
                 "id": 1002,
                 "name": "晚归签到任务 - B5号楼",
-                "beginTime": 1234567700000,  # 190 seconds before frozen time
-                "endTime": 1234567950000,    # 60 seconds after frozen time
+                "beginTime": 1234567700000,  # 冻结时间前190秒
+                "endTime": 1234567950000,    # 冻结时间后60秒
             },
             {
                 "id": 1003,
@@ -68,13 +68,13 @@ def sample_tasks():
             {
                 "id": 1004,
                 "name": "晚归签到任务 - 已过期",
-                "beginTime": 1234567000000,  # long time ago
-                "endTime": 1234567500000,    # expired
+                "beginTime": 1234567000000,  # 很久以前
+                "endTime": 1234567500000,    # 已过期
             },
             {
                 "id": 1005,
                 "name": "晚归签到任务 - 未开始",
-                "beginTime": 1234568000000,  # future
+                "beginTime": 1234568000000,  # 将来
                 "endTime": 1234568500000,
             },
         ]
@@ -83,13 +83,13 @@ def sample_tasks():
 
 @pytest.fixture
 def empty_tasks():
-    """Empty task list."""
+    """空任务列表。"""
     return {"records": []}
 
 
 @pytest.fixture
 def mock_response_with_tasks(sample_tasks):
-    """Mock HTTP response with task list."""
+    """带任务列表的mock HTTP响应。"""
     mock = MagicMock()
     mock.status_code = 200
     mock.json.return_value = sample_tasks
@@ -98,7 +98,7 @@ def mock_response_with_tasks(sample_tasks):
 
 @pytest.fixture
 def mock_response_empty(empty_tasks):
-    """Mock HTTP response with empty task list."""
+    """带空任务列表的mock HTTP响应。"""
     mock = MagicMock()
     mock.status_code = 200
     mock.json.return_value = empty_tasks
@@ -107,22 +107,22 @@ def mock_response_empty(empty_tasks):
 
 @pytest.fixture
 def frozen_time():
-    """Fixed Unix timestamp for testing."""
+    """用于测试的固定Unix时间戳。"""
     return 1234567890.0  # 2009-02-13 23:31:30 UTC
 
 
 class TestTaskServiceInitialization:
-    """Test TaskService initialization."""
+    """测试TaskService初始化。"""
     
     def test_initialization(self, mock_client):
-        """Test that TaskService initializes correctly."""
+        """测试TaskService正确初始化。"""
         service = TaskService(mock_client)
         
         assert service.client == mock_client
         assert service.logger is not None
     
     def test_default_constants(self, task_service):
-        """Test that default constants are set correctly."""
+        """测试默认常量设置正确。"""
         assert task_service.TASK_LIST_ENDPOINT == "/health-api/sign_in/student/my/page"
         assert task_service.DEFAULT_ROWS == 50
         assert task_service.DEFAULT_PAGE == 1
@@ -130,10 +130,10 @@ class TestTaskServiceInitialization:
 
 
 class TestGetPendingTask:
-    """Test get_pending_task method with various scenarios."""
+    """用各种场景测试get_pending_task方法。"""
     
     def test_match_active_wangui_task(self, task_service, mock_response_with_tasks, frozen_time):
-        """Test matching active '晚归' task."""
+        """测试匹配活跃的"晚归"任务。"""
         with patch.object(task_service.client, 'post', return_value=mock_response_with_tasks):
             with patch('time.time', return_value=frozen_time):
                 task_id = task_service.get_pending_task()
@@ -142,7 +142,7 @@ class TestGetPendingTask:
                 assert task_id == "1001"
     
     def test_skip_non_wangui_tasks(self, task_service, frozen_time):
-        """Test skipping tasks without '晚归' in name."""
+        """测试跳过名称中不含"晚归"的任务。"""
         tasks_with_non_wangui = {
             "records": [
                 {
@@ -178,14 +178,14 @@ class TestGetPendingTask:
                     assert len(skip_calls) > 0
     
     def test_filter_expired_tasks(self, task_service, frozen_time):
-        """Test filtering out expired tasks."""
+        """测试过滤掉已过期任务。"""
         tasks_with_expired = {
             "records": [
                 {
                     "id": 1004,
                     "name": "晚归签到任务 - 已过期",
                     "beginTime": 1234567000000,
-                    "endTime": 1234567500000,  # expired before frozen_time
+                    "endTime": 1234567500000,  # 已过期 before frozen_time
                 },
                 {
                     "id": 1001,
@@ -208,13 +208,13 @@ class TestGetPendingTask:
                 assert task_id == "1001"
     
     def test_filter_future_tasks(self, task_service, frozen_time):
-        """Test filtering out future (not started) tasks."""
+        """测试过滤掉将来（未开始）的任务。"""
         tasks_with_future = {
             "records": [
                 {
                     "id": 1005,
                     "name": "晚归签到任务 - 未开始",
-                    "beginTime": 1234568000000,  # future
+                    "beginTime": 1234568000000,  # 将来
                     "endTime": 1234568500000,
                 },
                 {
@@ -238,7 +238,7 @@ class TestGetPendingTask:
                 assert task_id == "1001"
     
     def test_return_none_when_no_valid_tasks(self, task_service, mock_response_empty, frozen_time):
-        """Test returning None when no valid tasks exist."""
+        """测试没有有效任务时返回None。"""
         with patch.object(task_service.client, 'post', return_value=mock_response_empty):
             with patch('time.time', return_value=frozen_time):
                 with patch.object(task_service.logger, 'info') as mock_log:
@@ -252,7 +252,7 @@ class TestGetPendingTask:
                     assert len(no_task_calls) > 0
     
     def test_return_none_when_only_non_wangui_tasks(self, task_service, frozen_time):
-        """Test returning None when only non-'晚归' tasks are active."""
+        """测试只有非"晚归"任务活跃时返回None。"""
         tasks_only_non_wangui = {
             "records": [
                 {
@@ -275,7 +275,7 @@ class TestGetPendingTask:
                 assert task_id is None
     
     def test_url_construction(self, task_service, mock_response_empty, frozen_time):
-        """Test that URL is constructed correctly with query parameters."""
+        """测试URL用查询参数正确构造。"""
         with patch.object(task_service.client, 'post', return_value=mock_response_empty) as mock_post:
             with patch('time.time', return_value=frozen_time):
                 task_service.get_pending_task()
@@ -290,7 +290,7 @@ class TestGetPendingTask:
                 assert "signState=0" in url
     
     def test_headers_set_correctly(self, task_service, mock_response_empty, frozen_time):
-        """Test that correct headers are passed to the request."""
+        """测试正确的头部被传递给请求。"""
         with patch.object(task_service.client, 'post', return_value=mock_response_empty) as mock_post:
             with patch('time.time', return_value=frozen_time):
                 task_service.get_pending_task()
@@ -303,10 +303,10 @@ class TestGetPendingTask:
 
 
 class TestErrorHandling:
-    """Test error handling in task service."""
+    """测试任务服务中的错误处理。"""
     
     def test_network_error_handling(self, task_service):
-        """Test handling of network errors."""
+        """测试网络错误处理。"""
         with patch.object(
             task_service.client, 'post',
             side_effect=requests.exceptions.ConnectionError("Connection failed")
@@ -321,7 +321,7 @@ class TestErrorHandling:
                 assert len(error_calls) > 0
     
     def test_json_parsing_error(self, task_service):
-        """Test handling of JSON parsing errors."""
+        """测试JSON解析错误处理。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
@@ -337,7 +337,7 @@ class TestErrorHandling:
                 assert len(error_calls) > 0
     
     def test_timeout_error_handling(self, task_service):
-        """Test handling of timeout errors."""
+        """测试超时错误处理。"""
         with patch.object(
             task_service.client, 'post',
             side_effect=requests.exceptions.Timeout("Request timed out")
@@ -353,10 +353,10 @@ class TestErrorHandling:
 
 
 class TestLogging:
-    """Test logging output matches original code."""
+    """测试日志输出与原始代码匹配。"""
     
     def test_request_url_logged(self, task_service, mock_response_empty, frozen_time):
-        """Test that request URL is logged."""
+        """测试请求URL被记录。"""
         with patch.object(task_service.client, 'post', return_value=mock_response_empty):
             with patch('time.time', return_value=frozen_time):
                 with patch.object(task_service.logger, 'info') as mock_log:
@@ -368,7 +368,7 @@ class TestLogging:
                     assert len(url_calls) > 0
     
     def test_match_success_logged(self, task_service, frozen_time):
-        """Test that successful match is logged correctly."""
+        """测试成功匹配被正确记录。"""
         tasks = {
             "records": [
                 {
@@ -395,7 +395,7 @@ class TestLogging:
                     assert len(match_calls) > 0
     
     def test_skip_other_tasks_logged(self, task_service, frozen_time):
-        """Test that skipping other tasks is logged correctly."""
+        """测试跳过其他任务被正确记录。"""
         tasks = {
             "records": [
                 {
@@ -422,7 +422,7 @@ class TestLogging:
                     assert len(skip_calls) > 0
     
     def test_no_valid_task_logged(self, task_service, mock_response_empty, frozen_time):
-        """Test that "no valid task" message is logged."""
+        """测试"没有有效任务"消息被记录。"""
         with patch.object(task_service.client, 'post', return_value=mock_response_empty):
             with patch('time.time', return_value=frozen_time):
                 with patch.object(task_service.logger, 'info') as mock_log:
@@ -435,10 +435,10 @@ class TestLogging:
 
 
 class TestGetTaskDetails:
-    """Test get_task_details method with various scenarios."""
+    """用各种场景测试get_task_details方法。"""
     
     def test_get_task_details_success(self, task_service):
-        """Test successfully getting task details."""
+        """测试成功获取任务详情。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -465,7 +465,7 @@ class TestGetTaskDetails:
             assert result.position_name == "福建农林大学安溪校区学生公寓A10号楼"
     
     def test_get_task_details_empty_positions(self, task_service):
-        """Test handling of empty signInPositions list."""
+        """测试空signInPositions列表的处理。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -484,7 +484,7 @@ class TestGetTaskDetails:
                 assert len(warning_calls) > 0
     
     def test_get_task_details_none_positions(self, task_service):
-        """Test handling of None signInPositions."""
+        """测试None signInPositions的处理。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -503,7 +503,7 @@ class TestGetTaskDetails:
                 assert len(warning_calls) > 0
     
     def test_get_task_details_missing_positions_key(self, task_service):
-        """Test handling of missing signInPositions key."""
+        """测试缺少signInPositions键的处理。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {}
@@ -515,7 +515,7 @@ class TestGetTaskDetails:
                 assert result is None
     
     def test_get_task_details_network_error(self, task_service):
-        """Test handling of network errors."""
+        """测试网络错误处理。"""
         with patch.object(
             task_service.client, 'get',
             side_effect=requests.exceptions.ConnectionError("Connection failed")
@@ -531,7 +531,7 @@ class TestGetTaskDetails:
                 assert len(error_calls) > 0
     
     def test_get_task_details_invalid_coordinates(self, task_service):
-        """Test handling of invalid coordinate values."""
+        """测试无效坐标值的处理。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -557,7 +557,7 @@ class TestGetTaskDetails:
                 assert len(error_calls) > 0
     
     def test_get_task_details_url_construction(self, task_service):
-        """Test that URL is constructed correctly."""
+        """测试URL构造正确。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -582,7 +582,7 @@ class TestGetTaskDetails:
             assert "fromPage=0" in url
     
     def test_get_task_details_logs_success(self, task_service):
-        """Test that success message is logged."""
+        """测试成功消息被记录。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -606,7 +606,7 @@ class TestGetTaskDetails:
                 assert len(success_calls) > 0
     
     def test_get_task_details_logs_url(self, task_service):
-        """Test that URL is logged."""
+        """测试URL被记录。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -630,7 +630,7 @@ class TestGetTaskDetails:
                 assert len(url_calls) > 0
     
     def test_get_task_details_float_conversion_with_strings(self, task_service):
-        """Test that string coordinates are properly converted to float."""
+        """测试字符串坐标被正确转换为浮点数。"""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {

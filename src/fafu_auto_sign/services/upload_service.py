@@ -1,9 +1,8 @@
-"""Upload service module for FAFU Auto Sign.
+"""FAFU 自动签到的上传服务模块。
 
-This module provides image upload functionality to Qiniu cloud storage,
-with proper resource management using context managers.
+本模块提供图片上传到七牛云存储的功能，
+使用上下文管理器进行正确的资源管理。
 """
-
 import logging
 import os
 from typing import Optional
@@ -12,54 +11,54 @@ from fafu_auto_sign.client import FAFUClient
 
 
 class UploadService:
-    """Service for image upload to Qiniu cloud storage.
+    """用于上传图片到七牛云存储的服务。
     
-    This service handles:
-    - File existence validation
-    - Image upload with proper resource management
-    - URL extraction from response
+    本服务处理：
+    - 文件存在性验证
+    - 使用正确资源管理的图片上传
+    - 从响应中提取 URL
     
-    Attributes:
-        client: FAFUClient instance for making HTTP requests
-        logger: Logger instance for this service
+    属性:
+        client: 用于发起 HTTP 请求的 FAFUClient 实例
+        logger: 本服务的日志记录器实例
     """
     
-    # API endpoint for image upload
+    # 图片上传的 API 端点
     UPLOAD_ENDPOINT = "/health-api/qiniu/image/upload"
     
-    # Default upload parameters
+    # 默认上传参数
     DEFAULT_FILE_PREFIX = "welink/school/health/"
     DEFAULT_COMPRESS = 1
     DEFAULT_DELETE_AFTER_DAYS = 1
     
     def __init__(self, client: FAFUClient):
-        """Initialize the upload service.
+        """初始化上传服务。
         
-        Args:
-            client: FAFUClient instance for making HTTP requests.
+        参数:
+            client: 用于发起 HTTP 请求的 FAFUClient 实例。
         """
         self.client = client
         self.logger = logging.getLogger(self.__class__.__name__)
     
     def upload_image(self, image_path: str) -> Optional[str]:
-        """Upload an image to Qiniu cloud storage.
+        """上传图片到七牛云存储。
         
-        This method uploads an image file to the server and returns
-        the Qiniu cloud URL. It uses proper context management to
-        ensure file handles are always closed.
+        本方法将图片文件上传到服务器并返回
+        七牛云 URL。它使用正确的上下文管理来
+        确保文件句柄始终关闭。
         
-        Args:
-            image_path: Path to the image file to upload.
+        参数:
+            image_path: 要上传的图片文件路径。
         
-        Returns:
-            The image URL (str) if upload is successful, None otherwise.
+        返回:
+            如果上传成功则返回图片 URL（字符串），否则返回 None。
         """
-        # Check if file exists
+        # 检查文件是否存在
         if not os.path.exists(image_path):
             self.logger.error("[!] 错误：请在脚本同目录下放一张名为 dorm.jpg 的照片作为签到图片！")
             return None
         
-        # Build the URL with query parameters
+        # 使用查询参数构建 URL
         url = (
             f"{self.UPLOAD_ENDPOINT}"
             f"?filePre={self.DEFAULT_FILE_PREFIX}"
@@ -70,8 +69,8 @@ class UploadService:
         self.logger.info(f"[*] 正在上传照片: {image_path}")
         
         try:
-            # Use context manager to ensure file is properly closed
-            # This fixes the file handle leak in the original code
+            # 使用上下文管理器确保文件被正确关闭
+            # 这修复了原始代码中的文件句柄泄漏问题
             with open(image_path, 'rb') as f:
                 files = {
                     'file': (
@@ -80,10 +79,10 @@ class UploadService:
                         'image/jpeg'
                     )
                 }
-                # The post request must be inside the with block
-                # to ensure the file handle is still open
+                # POST 请求必须在 with 代码块内
+                # 以确保文件句柄仍处于打开状态
                 response = self.client.post(url, files=files)
-            # File is automatically closed here by the context manager
+            # 文件在此处由上下文管理器自动关闭
             
             if response.status_code == 200:
                 img_url = response.text.strip()

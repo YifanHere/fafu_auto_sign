@@ -1,4 +1,4 @@
-"""Entry point for `python -m fafu_auto_sign`."""
+"""`python -m fafu_auto_sign` 的入口点。"""
 
 import argparse
 import sys
@@ -7,7 +7,7 @@ from fafu_auto_sign.main import run
 
 
 def main():
-    """Main entry point with command-line argument parsing."""
+    """主入口点，包含命令行参数解析。"""
     parser = argparse.ArgumentParser(description="FAFU自动签到助手")
     parser.add_argument(
         "--config", "-c",

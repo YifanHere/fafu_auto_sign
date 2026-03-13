@@ -1,4 +1,4 @@
-"""Tests for upload service module."""
+"""上传服务模块测试。"""
 
 import sys
 from pathlib import Path
@@ -15,7 +15,7 @@ from fafu_auto_sign.services.upload_service import UploadService
 
 @pytest.fixture
 def mock_config():
-    """Create a mock AppConfig for testing."""
+    """为测试创建mock AppConfig。"""
     return AppConfig(
         user_token="2_TEST_TOKEN",
         base_url="http://stuhtapi.fafu.edu.cn",
@@ -24,21 +24,21 @@ def mock_config():
 
 @pytest.fixture
 def client(mock_config):
-    """Create a FAFUClient instance for testing."""
+    """为测试创建FAFUClient实例。"""
     return FAFUClient(mock_config)
 
 
 @pytest.fixture
 def upload_service(client):
-    """Create an UploadService instance for testing."""
+    """为测试创建UploadService实例。"""
     return UploadService(client)
 
 
 class TestUploadServiceInitialization:
-    """Test service initialization and basic setup."""
+    """测试服务初始化和基本设置。"""
     
     def test_upload_service_initialization(self, client):
-        """Test that upload service initializes correctly with client."""
+        """测试上传服务用客户端正确初始化。"""
         service = UploadService(client)
         
         assert service.client == client
@@ -46,10 +46,10 @@ class TestUploadServiceInitialization:
 
 
 class TestUploadImageFileNotFound:
-    """Test handling when image file does not exist."""
+    """测试图片文件不存在时的处理。"""
     
     def test_upload_image_file_not_exists(self, upload_service, caplog):
-        """Test that upload returns None when file doesn't exist."""
+        """测试文件不存在时上传返回None。't exist."""
         with caplog.at_level("ERROR"):
             result = upload_service.upload_image("/nonexistent/path/image.jpg")
         
@@ -58,15 +58,15 @@ class TestUploadImageFileNotFound:
 
 
 class TestUploadImageSuccess:
-    """Test successful image upload scenarios."""
+    """测试成功的图片上传场景。"""
     
     def test_upload_image_success_returns_url(self, upload_service, tmp_path):
-        """Test that successful upload returns the image URL."""
-        # Create a temporary file
+        """测试成功上传返回图片URL。"""
+        # 创建临时文件
         image_file = tmp_path / "dorm.jpg"
         image_file.write_bytes(b"fake_image_data")
         
-        # Mock the response
+        # Mock响应
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.text = "http://qiniu.example.com/welink/school/health/test123.jpg"
@@ -77,17 +77,17 @@ class TestUploadImageSuccess:
         assert result == "http://qiniu.example.com/welink/school/health/test123.jpg"
     
     def test_upload_image_file_handle_closed(self, upload_service, tmp_path):
-        """Test that file handle is properly closed after upload (no leak)."""
-        # Create a temporary file
+        """测试上传后文件句柄被正确关闭（无泄漏）。"""
+        # 创建临时文件
         image_file = tmp_path / "dorm.jpg"
         image_file.write_bytes(b"fake_image_data")
         
-        # Mock the response
+        # Mock响应
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.text = "http://qiniu.example.com/test.jpg"
         
-        # Track if file was properly closed
+        # 跟踪文件是否被正确关闭
         original_open = open
         opened_files = []
         
@@ -100,13 +100,13 @@ class TestUploadImageSuccess:
             with patch.object(upload_service.client, 'post', return_value=mock_response):
                 result = upload_service.upload_image(str(image_file))
         
-        # After the with block, all files should be closed
+        # 在with块之后，所有文件都应该被关闭
         assert result is not None
         for f in opened_files:
             assert f.closed, "File handle was not closed - resource leak!"
     
     def test_upload_image_logs_success(self, upload_service, tmp_path, caplog):
-        """Test that successful upload logs the URL."""
+        """测试成功上传记录URL。"""
         image_file = tmp_path / "test.jpg"
         image_file.write_bytes(b"fake_image_data")
         
@@ -123,10 +123,10 @@ class TestUploadImageSuccess:
 
 
 class TestUploadImageFailure:
-    """Test failed image upload scenarios."""
+    """测试失败的图片上传场景。"""
     
     def test_upload_image_failure_returns_none(self, upload_service, tmp_path):
-        """Test that failed upload returns None."""
+        """测试失败上传返回None。"""
         image_file = tmp_path / "dorm.jpg"
         image_file.write_bytes(b"fake_image_data")
         
@@ -139,7 +139,7 @@ class TestUploadImageFailure:
         assert result is None
     
     def test_upload_image_exception_returns_none(self, upload_service, tmp_path):
-        """Test that exception during upload returns None."""
+        """测试上传期间异常返回None。"""
         image_file = tmp_path / "dorm.jpg"
         image_file.write_bytes(b"fake_image_data")
         
@@ -149,7 +149,7 @@ class TestUploadImageFailure:
         assert result is None
     
     def test_upload_image_failure_logs_error(self, upload_service, tmp_path, caplog):
-        """Test that failed upload logs appropriate error."""
+        """测试失败上传记录适当的错误。"""
         image_file = tmp_path / "dorm.jpg"
         image_file.write_bytes(b"fake_image_data")
         
@@ -164,10 +164,10 @@ class TestUploadImageFailure:
 
 
 class TestUploadImageParameters:
-    """Test that upload uses correct API parameters."""
+    """测试上传使用正确的API参数。"""
     
     def test_upload_image_uses_correct_endpoint(self, upload_service, tmp_path):
-        """Test that upload uses the correct API endpoint."""
+        """测试上传使用正确的API端点。"""
         image_file = tmp_path / "dorm.jpg"
         image_file.write_bytes(b"fake_image_data")
         
@@ -178,7 +178,7 @@ class TestUploadImageParameters:
         with patch.object(upload_service.client, 'post', return_value=mock_response) as mock_post:
             upload_service.upload_image(str(image_file))
             
-            # Verify the endpoint was called
+            # 验证端点被调用
             call_args = mock_post.call_args
             url = call_args[0][0]
             assert "/health-api/qiniu/image/upload" in url
@@ -187,7 +187,7 @@ class TestUploadImageParameters:
             assert "isDeleteAfterDays=1" in url
     
     def test_upload_image_uses_correct_file_field(self, upload_service, tmp_path):
-        """Test that upload uses correct file field format."""
+        """测试上传使用正确的文件字段格式。"""
         image_file = tmp_path / "dorm.jpg"
         image_file.write_bytes(b"fake_image_data")
         
@@ -198,10 +198,10 @@ class TestUploadImageParameters:
         with patch.object(upload_service.client, 'post', return_value=mock_response) as mock_post:
             upload_service.upload_image(str(image_file))
             
-            # Verify files parameter
+            # 验证files参数
             call_kwargs = mock_post.call_args[1]
             files = call_kwargs['files']
             assert 'file' in files
             file_tuple = files['file']
-            assert file_tuple[0] == "dorm.jpg"  # filename
-            assert file_tuple[2] == "image/jpeg"  # content type
+            assert file_tuple[0] == "dorm.jpg"  # 文件名
+            assert file_tuple[2] == "image/jpeg"  # 内容类型

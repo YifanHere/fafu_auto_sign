@@ -1,8 +1,8 @@
 """
-Task identification characterization tests.
+任务识别特征化测试。
 
-These tests capture the current behavior of the TaskService.get_pending_task() method
-and serve as regression tests after refactoring.
+这些测试捕获TaskService.get_pending_task()方法的当前行为
+并作为重构后的回归测试。
 """
 import pytest
 from unittest.mock import patch, MagicMock
@@ -11,7 +11,7 @@ import sys
 import os
 from freezegun import freeze_time
 
-# Add project root to path
+# 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fafu_auto_sign.config import AppConfig
@@ -27,7 +27,7 @@ class TestTaskIdentification:
         """
         测试能正确识别包含"晚归"关键词且在时间窗口内的有效任务
         """
-        # Create config and service
+        # 创建配置和服务
         config = AppConfig(user_token=sample_token)
         client = FAFUClient(config)
         service = TaskService(client)

@@ -1,7 +1,7 @@
-"""Services module for FAFU Auto Sign.
+"""FAFU 自动签到的服务模块。
 
-This module provides various service classes for handling
-different aspects of the sign-in automation.
+本模块提供各种服务类，用于处理
+签到自动化的不同方面。
 """
 
 from fafu_auto_sign.services.sign_service import SignService
