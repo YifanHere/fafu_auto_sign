@@ -153,7 +153,7 @@ class NotificationService:
             
             def do_send():
                 try:
-                    response = sc_send(sendkey, title, content)
+                    response = sc_send(sendkey, title, desp=content)
                     result_container.append(response)
                 except Exception as e:
                     exception_container.append(e)
