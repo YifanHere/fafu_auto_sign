@@ -253,7 +253,7 @@ fafu_auto_sign/
 
 ### 🤝 参与贡献
 
-欢迎提交 Issue 和 Pull Request！如果你发现了接口变更或开发了新增功能（如引入 Server酱 推送微信通知），非常欢迎一起完善本项目。
+欢迎提交 Issue 和 Pull Request！如果你发现了接口变更或开发了新增功能，非常欢迎一起完善本项目。
 
 1. Fork 本仓库
 2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
