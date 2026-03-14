@@ -76,8 +76,8 @@ class NotificationService:
         else:
             return "未知格式"
     
-    def notify(self, title: str, content: str, task_id: str = None, 
-               success: bool = None) -> bool:
+    def notify(self, title: str, content: str, task_id: Optional[str] = None, 
+               success: Optional[bool] = None) -> bool:
         """发送推送通知（非阻塞）。
         
         本方法会检查去重逻辑，如果该任务在5分钟内已发送过
@@ -135,7 +135,7 @@ class NotificationService:
             return False
     
     def _send_notification(self, sendkey: str, title: str, content: str,
-                           task_id: str = None, success: bool = None) -> None:
+                           task_id: Optional[str] = None, success: Optional[bool] = None) -> None:
         """实际发送通知（在后台线程中执行）。
         
         参数:

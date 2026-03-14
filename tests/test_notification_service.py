@@ -12,8 +12,8 @@ import time
 import os
 import types
 import importlib.util
-from pathlib import Path
 from unittest.mock import MagicMock, patch
+import pytest
 
 # 预处理：创建一个假的 fafu_auto_sign 包结构，避免循环导入
 # 首先检查是否已存在，如果存在则移除
@@ -34,6 +34,8 @@ spec = importlib.util.spec_from_file_location(
     'fafu_auto_sign.services.notification_service',
     os.path.join(os.path.dirname(__file__), '..', 'src', 'fafu_auto_sign', 'services', 'notification_service.py')
 )
+if spec is None or spec.loader is None:
+    raise ImportError("无法加载 notification_service 模块")
 notification_module = importlib.util.module_from_spec(spec)
 
 # 创建 services 包
@@ -48,20 +50,20 @@ config_spec = importlib.util.spec_from_file_location(
     'fafu_auto_sign.config',
     os.path.join(os.path.dirname(__file__), '..', 'src', 'fafu_auto_sign', 'config.py')
 )
+if config_spec is None or config_spec.loader is None:
+    raise ImportError("无法加载 config 模块")
 config_module = importlib.util.module_from_spec(config_spec)
 sys.modules['fafu_auto_sign.config'] = config_module
 config_spec.loader.exec_module(config_module)
 
 # 2. serverchan_sdk - 使用 mock
 serverchan_sdk = types.ModuleType('serverchan_sdk')
-serverchan_sdk.sc_send = MagicMock(return_value={'code': 0})
+setattr(serverchan_sdk, 'sc_send', MagicMock(return_value={'code': 0}))
 sys.modules['serverchan_sdk'] = serverchan_sdk
 
 # 加载 notification_service
 spec.loader.exec_module(notification_module)
 NotificationService = notification_module.NotificationService
-
-import pytest
 
 
 @pytest.fixture
@@ -317,7 +319,7 @@ class TestSendNotification:
         )
         
         # 验证 sc_send 被调用
-        mock_sc_send.assert_called_once_with("SCT12345", "测试标题", "测试内容")
+        mock_sc_send.assert_called_once_with("SCT12345", "测试标题", desp="测试内容")
 
     @patch.object(notification_module, 'sc_send')
     def test_send_exception_handled(self, mock_sc_send, notification_service):
