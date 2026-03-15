@@ -2,10 +2,14 @@
   "user_token": "2_YOUR_TOKEN_HERE",
   "jitter": 5e-05,
   "image_path": "dorm.jpg",
-  "image_dir": "",
+  "image_dir": null,
   "base_url": "http://stuhtapi.fafu.edu.cn",
   "heartbeat_interval": 900,
   "log_level": "INFO",
   "notification_enabled": false,
-  "serverchan_key": "SCTxxxxx"
+  "serverchan_key": null,
+  "task_keywords": [
+    "晚归"
+  ],
+  "latest_image_dir": null
 }

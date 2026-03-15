@@ -10,9 +10,7 @@ def main():
     """主入口点，包含命令行参数解析。"""
     parser = argparse.ArgumentParser(description="FAFU自动签到助手")
     parser.add_argument(
-        "--config", "-c",
-        default="config.json",
-        help="配置文件路径 (默认: config.json)"
+        "--config", "-c", default="config.json", help="配置文件路径 (默认: config.json)"
     )
     args = parser.parse_args()
 

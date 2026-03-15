@@ -10,7 +10,7 @@
 
 ✅ **心跳保活机制 (Keep-Alive)**：通过定时发送轻量级请求，保持后端 Session 存活，**彻底解决 Token 短期过期问题，实现一次抓包，一劳永逸！**
 
-✅ **智能任务识别**：自动遍历任务列表，根据时间戳与关键词精准识别当前有效的签到任务，过滤历史过期任务。
+✅ **智能任务识别**：自动遍历任务列表，根据时间戳与自定义关键词精准识别当前有效的签到任务，过滤历史过期任务。
 
 ✅ **动态位置获取**：通过任务详情接口自动获取签到位置坐标，**无需手动配置经纬度**，适应不同签到地点。
 
@@ -98,6 +98,8 @@ export FAFU_HEARTBEAT_INTERVAL="900"
 export FAFU_NOTIFICATION_ENABLED="false"
 export FAFU_SERVERCHAN_KEY=""
 export FAFU_IMAGE_DIR="./photos/"  # 图片目录路径（启用随机选择）
+export FAFU_TASK_KEYWORDS='["晚归"]'  # 任务关键词列表（JSON格式）
+export FAFU_LATEST_IMAGE_DIR=""  # 最新图片目录路径
 ```
 
 **Windows PowerShell:**
@@ -111,14 +113,16 @@ $env:FAFU_USER_TOKEN="2_YOUR_TOKEN_HERE"
 |--------|------|--------|------|
 | `user_token` | ✅ | - | 用户令牌（必须以 `2_` 开头） |
 | `jitter` | ❌ | `0.00005` | GPS 抖动量（0 到 0.001 之间） |
-| `image_path` | ❌ | `dorm.jpg` | 签到照片文件路径（当未配置 `image_dir` 时使用） |
+| `image_path` | ❌ | `dorm.jpg` | 签到照片文件路径（当未配置 `image_dir` 或 `latest_image_dir` 时使用） |
 | `image_dir` | ❌ | - | 图片目录路径，设置后将从目录中随机选择图片上传（优先级高于 `image_path`） |
 | `base_url` | ❌ | `http://stuhtapi.fafu.edu.cn` | API 基础 URL |
 | `heartbeat_interval` | ❌ | `900` | 心跳间隔秒数（默认 15 分钟） |
 | `log_level` | ❌ | `INFO` | 日志级别（DEBUG/INFO/WARNING/ERROR/CRITICAL） |
 | `notification_enabled` | ❌ | `false` | 是否启用微信推送通知 |
 | `serverchan_key` | ❌ | - | Server酱 SendKey（启用通知时必需）|
-💡 **多图片配置示例**：
+| `task_keywords` | ❌ | `["晚归"]` | 任务关键词列表，用于识别需要签到的任务（JSON 数组格式） |
+| `latest_image_dir` | ❌ | - | 最新图片目录路径，设置后将使用目录中最新修改的图片（优先级高于 `image_dir`） |
+💡 **配置示例**：
 
 如果你想使用多图片随机选择功能，可以在 `config.json` 中配置：
 
@@ -130,11 +134,23 @@ $env:FAFU_USER_TOKEN="2_YOUR_TOKEN_HERE"
   "image_path": "dorm.jpg",   // 备用单图片（可选）
   "base_url": "http://stuhtapi.fafu.edu.cn",
   "heartbeat_interval": 900,
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "task_keywords": ["晚归", "查寝"],  // 自定义任务关键词
+  "latest_image_dir": "./camera/"     // 最新图片目录（可选）
 }
 ```
 
 在 `./photos/` 目录中放入多张图片（支持 `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp` 格式），程序每次签到时会随机选择一张上传。
+
+**图片选择优先级**（从高到低）：
+1. `latest_image_dir` - 使用目录中最新修改的图片
+2. `image_dir` - 从目录中随机选择图片
+3. `image_path` - 使用指定的单张图片
+
+**任务关键词说明**：
+- 默认只识别包含"晚归"的签到任务
+- 可自定义多个关键词，如 `["晚归", "查寝", "点名"]`
+- 只要任务名称包含任意一个关键词，就会被识别为待签到任务
 
 #### 微信推送通知配置（可选）
 

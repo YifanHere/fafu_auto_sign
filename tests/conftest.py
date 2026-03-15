@@ -1,8 +1,10 @@
 """
 Pytest fixtures for characterization tests.
 """
+
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 @pytest.fixture
@@ -31,13 +33,13 @@ def sample_tasks():
                 "id": 1001,
                 "name": "晚归签到任务 - A10号楼",
                 "beginTime": 1234567800000,  # 比当前时间早 100 秒
-                "endTime": 1234567980000,    # 比当前时间晚 90 秒
+                "endTime": 1234567980000,  # 比当前时间晚 90 秒
             },
             {
                 "id": 1002,
                 "name": "晚归签到任务 - B5号楼",
                 "beginTime": 1234567700000,  # 比当前时间早 190 秒
-                "endTime": 1234567950000,    # 比当前时间晚 60 秒
+                "endTime": 1234567950000,  # 比当前时间晚 60 秒
             },
             {
                 "id": 1003,
@@ -49,7 +51,7 @@ def sample_tasks():
                 "id": 1004,
                 "name": "晚归签到任务 - 已过期",
                 "beginTime": 1234567000000,  # 很久以前
-                "endTime": 1234567500000,    # 已过期
+                "endTime": 1234567500000,  # 已过期
             },
             {
                 "id": 1005,

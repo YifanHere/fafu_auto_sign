@@ -4,8 +4,8 @@
 签到自动化的不同方面。
 """
 
+from fafu_auto_sign.services.notification_service import NotificationService
 from fafu_auto_sign.services.sign_service import SignService
 from fafu_auto_sign.services.task_service import TaskService
-from fafu_auto_sign.services.notification_service import NotificationService
 
 __all__ = ["SignService", "TaskService", "NotificationService"]
