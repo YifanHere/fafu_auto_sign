@@ -131,6 +131,7 @@ class UploadService:
         """
         # 确定要上传的图片路径
         actual_image_path = image_path
+        is_from_latest_dir = False
 
         # 优先级：latest_image_dir > image_dir > image_path
         if hasattr(self.client, "config") and self.client.config.latest_image_dir:
@@ -146,6 +147,7 @@ class UploadService:
                 return None
 
             actual_image_path = selected
+            is_from_latest_dir = True
         elif hasattr(self.client, "config") and self.client.config.image_dir:
             image_dir = self.client.config.image_dir
             self.logger.info(f"[*] 使用图片目录: {image_dir}")
@@ -187,6 +189,15 @@ class UploadService:
             if response.status_code == 200:
                 img_url: str = response.text.strip()
                 self.logger.info(f"[*] 照片上传成功, 七牛云URL: {img_url}")
+                
+                # 如果图片来自 latest_image_dir，上传成功后删除该图片
+                if is_from_latest_dir:
+                    try:
+                        os.remove(actual_image_path)
+                        self.logger.info(f"[*] 已删除最新图片目录中的图片: {actual_image_path}")
+                    except Exception as e:
+                        self.logger.error(f"[x] 删除图片失败: {actual_image_path}, 错误: {e}")
+                
                 return img_url
             else:
                 self.logger.error(f"[!] 照片上传失败，HTTP状态码: {response.status_code}")
