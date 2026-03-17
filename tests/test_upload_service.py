@@ -275,3 +275,114 @@ class TestUploadServiceLatestImage:
             call_kwargs = mock_post.call_args[1]
             files = call_kwargs["files"]
             assert files["file"][0] == "latest.jpg"
+
+
+class TestUploadServiceAutoDelete:
+    """测试上传服务的自动删除功能（RED状态测试）。"""
+
+    def test_latest_image_dir_upload_success_deletes_image(
+        self, upload_service, tmp_path, mock_config
+    ):
+        """测试从 latest_image_dir 选择的图片在上传成功后被删除。"""
+        latest_dir = tmp_path / "latest_images"
+        latest_dir.mkdir()
+        image_file = latest_dir / "test.jpg"
+        image_file.write_bytes(b"fake_data")
+        mock_config.latest_image_dir = str(latest_dir)
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = "http://qiniu.example.com/test.jpg"
+
+        with patch.object(upload_service.client, "post", return_value=mock_response):
+            result = upload_service.upload_image("fallback.jpg")
+
+        assert result is not None
+        # 应该被删除
+        assert not image_file.exists()
+
+    def test_latest_image_dir_upload_failure_does_not_delete_image(
+        self, upload_service, tmp_path, mock_config
+    ):
+        """测试从 latest_image_dir 选择的图片在上传失败后不被删除。"""
+        latest_dir = tmp_path / "latest_images"
+        latest_dir.mkdir()
+        image_file = latest_dir / "test.jpg"
+        image_file.write_bytes(b"fake_data")
+        mock_config.latest_image_dir = str(latest_dir)
+
+        mock_response = Mock()
+        mock_response.status_code = 500
+
+        with patch.object(upload_service.client, "post", return_value=mock_response):
+            result = upload_service.upload_image("fallback.jpg")
+
+        assert result is None
+        # 应该不被删除
+        assert image_file.exists()
+
+    def test_image_dir_upload_success_does_not_delete_image(
+        self, upload_service, tmp_path, mock_config
+    ):
+        """测试从 image_dir 选择的图片在上传成功后不被删除。"""
+        image_dir = tmp_path / "images"
+        image_dir.mkdir()
+        image_file = image_dir / "test.jpg"
+        image_file.write_bytes(b"fake_data")
+        mock_config.image_dir = str(image_dir)
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = "http://qiniu.example.com/test.jpg"
+
+        with patch.object(upload_service.client, "post", return_value=mock_response):
+            result = upload_service.upload_image("fallback.jpg")
+
+        assert result is not None
+        # 应该不被删除
+        assert image_file.exists()
+
+    def test_image_path_upload_success_does_not_delete_image(
+        self, upload_service, tmp_path
+    ):
+        """测试从 image_path 选择的图片在上传成功后不被删除。"""
+        image_file = tmp_path / "test.jpg"
+        image_file.write_bytes(b"fake_data")
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = "http://qiniu.example.com/test.jpg"
+
+        with patch.object(upload_service.client, "post", return_value=mock_response):
+            result = upload_service.upload_image(str(image_file))
+
+        assert result is not None
+        # 应该不被删除
+        assert image_file.exists()
+
+    def test_delete_failure_only_logs_does_not_affect_result(
+        self, upload_service, tmp_path, mock_config, caplog
+    ):
+        """测试删除失败时只记录日志，不影响返回结果。"""
+        latest_dir = tmp_path / "latest_images"
+        latest_dir.mkdir()
+        image_file = latest_dir / "test.jpg"
+        image_file.write_bytes(b"fake_data")
+        mock_config.latest_image_dir = str(latest_dir)
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = "http://qiniu.example.com/test.jpg"
+
+        # Mock os.remove 抛出异常
+        def mock_remove(path):
+            raise OSError("Permission denied")
+
+        with patch.object(upload_service.client, "post", return_value=mock_response):
+            with patch("os.remove", side_effect=mock_remove):
+                with caplog.at_level("ERROR"):
+                    result = upload_service.upload_image("fallback.jpg")
+
+        # 即使删除失败，上传结果应该仍然成功
+        assert result is not None
+        assert "删除图片失败" in caplog.text
