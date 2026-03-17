@@ -121,7 +121,7 @@ $env:FAFU_USER_TOKEN="2_YOUR_TOKEN_HERE"
 | `notification_enabled` | ❌ | `false` | 是否启用微信推送通知 |
 | `serverchan_key` | ❌ | - | Server酱 SendKey（启用通知时必需）|
 | `task_keywords` | ❌ | `["晚归"]` | 任务关键词列表，用于识别需要签到的任务（JSON 数组格式） |
-| `latest_image_dir` | ❌ | - | 最新图片目录路径，设置后将使用目录中最新修改的图片（优先级高于 `image_dir`） |
+| `latest_image_dir` | ❌ | - | 最新图片目录路径，设置后将使用目录中最新修改的图片,图片使用后自动删除 |
 💡 **配置示例**：
 
 如果你想使用多图片随机选择功能，可以在 `config.json` 中配置：
