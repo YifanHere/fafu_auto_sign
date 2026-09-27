@@ -9,7 +9,7 @@ import string
 import time
 from urllib.parse import urlparse
 
-SECRET_KEY = "AtPs2O1xEnhwkKDV"
+SECRET_KEY = ""
 
 
 def generate_auth_header(url: str, user_token: str) -> str:
