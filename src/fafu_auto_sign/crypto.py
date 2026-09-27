@@ -9,6 +9,10 @@ import string
 import time
 from urllib.parse import urlparse
 
+"""
+SECRET_KEY 本身是学校系统的公开缺陷，它硬编码在前端JS中，无法阻止任何人获取。
+但为了规避可能存在的风险，同时倡导真正的技术学习与进步（这是本项目的初心），作者无法提供它，请你自行研究！
+"""
 SECRET_KEY = ""
 
 
