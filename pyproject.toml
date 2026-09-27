@@ -7,7 +7,7 @@ name = "fafu-auto-sign"
 version = "0.1.0"
 description = "福建农林大学数字FAFU自动签到助手"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "CC-BY-NC-SA-4.0"}
 requires-python = ">=3.10"
 authors = [
     {name = "FAFU Auto Sign Contributors"},
@@ -16,7 +16,7 @@ keywords = ["fafu", "auto-sign", "签到", "福建农林大学"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",

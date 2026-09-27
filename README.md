@@ -1,8 +1,17 @@
 ## 🏫 数字 FAFU 自动签到助手 (FAFU Auto Sign)
 
-![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg) ![License MIT](https://img.shields.io/badge/License-MIT-green.svg) ![Status Stable](https://img.shields.io/badge/Status-Stable-brightgreen.svg)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg) ![License CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg) ![Status Stable](https://img.shields.io/badge/Status-Stable-brightgreen.svg)
 
 本项目是针对福建农林大学与华为 WeLink 合作推出的"数字FAFU" APP 所编写的**自动签到程序**。通过逆向分析其前端加密逻辑，本项目实现了完全脱离 APP 的纯接口级自动化签到。
+
+### 🚨 免责声明 (Disclaimer)
+
+1. 本项目开源仅为 Python 网络爬虫、JS 逆向工程及自动化测试技术的**学习与学术交流**。
+2. **严禁**将本项目用于任何商业目的、代签服务或其他营利性活动。
+3. **严禁**将本项目用于违反学校管理规定的行为，包括但不限于恶意逃避考勤与监管。
+4. 任何人基于本项目进行的二次开发、修改或再分发行为，其后果由行为人自行承担，与本项目原作者无关。
+5. **使用者因滥用本项目引发的一切后果与责任由使用者本人自行承担，开发者不承担任何直接或间接责任。**
+6. **本项目作者未授权任何人以本项目为基础提供付费代签或类似服务。**
 
 ### ✨ 核心特性
 
@@ -25,12 +34,6 @@
 ✅ **健壮的重试机制**：客户端内置指数退避重试策略，自动处理网络抖动和临时服务不可用。
 
 ✅ **微信推送通知**：集成 Server酱，支持签到成功/失败实时推送到微信，5分钟内同类型消息自动去重。
-
-### 🚨 免责声明 (Disclaimer)
-
-1. 本项目开源仅为 Python 网络爬虫、JS 逆向工程及自动化测试技术的**学习与学术交流**。
-2. 请遵守学校相关管理规定，切勿用于恶意逃避考勤与监管。
-3. **使用者因滥用本项目引发的一切后果与责任由使用者本人自行承担，开发者不承担任何直接或间接责任**。
 
 ### 🛠️ 快速开始
 
@@ -279,7 +282,15 @@ fafu_auto_sign/
 
 ### 📄 开源协议 (License)
 
-本项目采用 **MIT License** 开源协议。
+本项目采用 **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans)**（知识共享 署名-非商业性使用-相同方式共享 4.0 国际许可协议）开源。
+
+- ✅ **允许**：在**署名**的前提下，出于**学习、研究等非商业目的**自由共享、复制、分发及改编本项目。
+- 🚫 **禁止**：将本项目用于任何**商业目的或营利性活动**，包括但不限于付费代签、代签到等一切获取金钱报酬的行为。
+- 🔁 **相同方式共享**：若您基于本项目再创作并分发，必须采用**相同的 CC BY-NC-SA 4.0 协议**。
+
+> ⚠️ **协议变更说明**：本项目早期版本曾采用 MIT License。自本次变更起，**新版本**改采 CC BY-NC-SA 4.0。依据 MIT 协议不可撤销的特性，此前已获取 MIT 版本副本的第三方，其对该**历史版本**的使用仍受 MIT 约束；但任何基于本项目的**后续使用、分发或再创作**均应遵守 CC BY-NC-SA 4.0 的非商业性条款。作者从未授权任何人以本项目为基础提供付费代签或任何营利性服务。
+
+完整协议全文见仓库根目录 [`LICENSE.md`](./LICENSE.md)。
 
 ---
 
