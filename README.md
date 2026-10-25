@@ -49,7 +49,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/yourusername/fafu_auto_sign.git
+git clone https://github.com/YifanHere/fafu_auto_sign.git
 cd fafu_auto_sign
 
 # 以可编辑模式安装（推荐开发使用）
